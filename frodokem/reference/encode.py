@@ -28,15 +28,14 @@ def frodo_encode(k_vector: bytes, params: FrodoParams) -> list[list[int]]:
 
     # Initialize the matrix K as an mbar-by-nbar matrix in Z_q
     # Matches *Output:* in Algorithm 1 (Frodo.Encode)
-    K_matrix = [[0]*params.nbar for _ in range(params.mbar)]
-
+    K_matrix = [[0] * params.nbar for _ in range(params.mbar)]
     for i in range(params.mbar):
         for j in range(params.nbar):
+            k_value = 0
             for l in range(params.B):
-                step = (i*params.nbar + j)*(params.B + l)
-                k_value = k_vector[step] * 2**l
-                encoded_k = ec(k_value, params)
-                K_matrix[i][j] = encoded_k
+                step = (i * params.nbar + j) * params.B + l
+                k_value += bits[step] * (2 ** l)
+            K_matrix[i][j] = ec(k_value, params)
     return K_matrix
 
 
@@ -50,13 +49,12 @@ def frodo_decode(K_matrix: list[list[int]], params: FrodoParams) -> list[int]:
     Returns:
         int: Bit string of length `ell`
     """
-    k_vector = 0*[params.ell]
-
+    k_vector = [0]*(params.ell)
     for i in range(params.mbar):
         for j in range(params.nbar):
             decoded_k = dc(K_matrix[i][j], params)
             for l in range(params.B):
-                step = (i*params.nbar + j)*(params.B + l)
+                step = (i * params.nbar + j) * params.B + l
                 k_vector[step] = (decoded_k >> l) & 1
     return k_vector
 

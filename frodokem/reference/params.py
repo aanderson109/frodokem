@@ -34,9 +34,11 @@ class FrodoParams:
     shake_variant: Literal[128, 256]
     sigma: float
     cdf_table: tuple[int, ...]
+    s: int = field(init=False)
 
     def __post_init__(self):
         self.ell = self.B * self.mbar * self.nbar
+        self.s = len(self.cdf_table) - 1
 
 
 # FrodoKEM-1344-AES -- NIST Security Category 5
@@ -58,6 +60,7 @@ FRODO_1344_AES = FrodoParams(
     length_CHI = 16,
     sigma = 1.4,
     cdf_table = _CDF_1344,
+    #s = 6,
     shake_variant = 256
 )
 
@@ -81,6 +84,7 @@ FRODO_976_AES = FrodoParams(
     length_CHI = 16,
     sigma = 2.3,
     cdf_table = _CDF_976,
+    #s = 10,
     shake_variant = 256
 )
 
@@ -104,5 +108,6 @@ FRODO_640_AES = FrodoParams(
     length_CHI = 16,
     sigma = 2.8,
     cdf_table = _CDF_640,
+    #s = 12,
     shake_variant = 128
 )

@@ -1,0 +1,64 @@
+module frodo where
+
+type FrodoParams_1344 = {
+    D : [8],
+    q : [32],
+    n : [16],
+    mbar : [8],
+    nbar : [8],
+    B : [8],
+    ell : [16],
+    length_CHI : [8],
+    s : [8],
+    cdf_table : [7][16]
+}
+
+frodo1344 : FrodoParams_1344
+frodo1344 = {
+    D = 16,
+    q = 65536,
+    n = 1344,
+    mbar = 8,
+    nbar = 8,
+    B = 4,
+    ell = 256,
+    length_CHI = 16,
+    s = 6,
+    cdf_table = [18286, 14320, 6876, 2023, 364, 40, 2]
+}
+
+type D_1344 = 16
+type q_1344 = 65536
+type n_1344 = 1344
+type mbar_1344 = 8
+type nbar_1344 = 8
+type B_1344 = 4
+type ell_1344 = 256
+
+
+ec : {D, B} (fin D, fin B, B <= D) => [B] -> [D]
+ec k = (zero # k) << `(D-B)
+
+
+dc : {D, B} (fin B, fin D, B <= D) => [D] -> [B]
+dc c = drop`{D-B} (c >> `(D-B))
+
+roundtrip_ec_dc : [B_1344] -> Bit
+property roundtrip_ec_dc k = dc`{D_1344, B_1344} (ec`{D_1344, B_1344} k) == k
+
+
+frodo_encode : {mbar, nbar, B, D} (fin mbar, fin nbar,
+                                        fin B, fin D, B <= D,
+                                        mbar*nbar*B % 8 == 0)
+                                        => [(B*mbar*nbar) / 8][8] -> [mbar][nbar][D]
+frodo_encode k = groupBy`{nbar} [ ec`{D, B} (reverse substring) | substring <- groupBy`{B} (join k)]
+
+
+frodo_decode : {mbar, nbar, B, D} (fin mbar, fin nbar,
+                                    fin B, fin D, B <= D,
+                                    mbar*nbar*B % 8 == 0)
+                                    => [mbar][nbar][D] -> [(B*mbar*nbar) / 8][8]
+frodo_decode K = groupBy`{8}(join([reverse (dc`{D,B} entry) | row <- K, entry <- row ]))
+
+roundtrip_encode_decode : [ell_1344/8][8] -> Bit
+property roundtrip_encode_decode k = frodo_decode`{mbar_1344, nbar_1344, B_1344, D_1344} (frodo_encode`{mbar_1344, nbar_1344, B_1344, D_1344} k) == k

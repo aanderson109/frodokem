@@ -1,0 +1,434 @@
+module frodokem where
+import AES
+
+/**
+ * FrodoKEM-1344 parameter set
+ */
+type D           = 16
+type q           = 65536
+type n           = 1344
+type nbar        = 8
+type B           = 4
+type d           = 6
+type lengthSeedA = 128
+type lengthSec   = 256
+type lengthSE    = 512
+type lengthSalt  = 512
+type l           = B * (nbar^^2)
+
+T_x : [d+1]Integer
+T_x         = [9142, 23462, 30338, 32361, 32725, 32765, 32767]
+type LenChi = 16
+
+/**
+ * Type aliases to enhance readability
+ */
+type Byte             = [8]
+type ByteArray len    = [len]Byte
+type Matrix r c a     = [r][c]a
+type Coeff            = [D]
+type ZqElem           = [D]
+type PackBits r c     = D * r * c
+type PackBytes r c    = PackBits r c / 8
+type FrodoMatrix      = Matrix nbar nbar Coeff
+type Bitstring len    = [len]
+type Sample           = [LenChi]
+type PublicMatrixA    = Matrix n n Coeff
+type SeedA            = Bitstring lengthSeedA
+type SeedSE           = Bitstring lengthSE
+type SecretS          = Bitstring lengthSec
+type Salt             = Bitstring lengthSalt
+type PKHash           = Bitstring lengthSec
+type ZSeed            = Bitstring lengthSeedA
+type SampleVector len = [len]Sample
+type KeyGenSamples    = SampleVector (2 * n * nbar)
+type SecretMatrixST   = Matrix nbar n ZqElem
+type SecretMatrixS    = Matrix n nbar ZqElem
+type SecretMatrixS'   = Matrix nbar n ZqElem
+type ErrorMatrixE     = Matrix n nbar ZqElem
+type ErrorMatrixE'    = Matrix nbar n ZqElem
+type ErrorMatrixE''   = FrodoMatrix
+type PublicMatrixB    = Matrix n nbar ZqElem
+type PublicMatrixB'   = Matrix nbar n ZqElem
+type KeyGenRandomness = Bitstring (lengthSec + lengthSE + lengthSeedA)
+type RStreamBits      = 32 * n * nbar
+type RStream          = Bitstring RStreamBits
+type EncapRandomness  = Bitstring (lengthSec + lengthSalt)
+type EncapRStreamBits = 16 * (2 * n * nbar + nbar * nbar)
+type EncapRStream     = Bitstring EncapRStreamBits
+type PackedB          = ByteArray (PackBytes n nbar)
+
+
+/**
+ * Type aliases for key byte sizes
+ */
+type PublicKeyBytes    = (lengthSeedA + D * n * nbar) / 8
+type SecretKeyBytes    = (2 * lengthSec + lengthSeedA
+                          + D * n * nbar + 16 * n * nbar) / 8
+type CiphertextBytes   = (D * nbar * n + D * nbar^^2
+                          + lengthSalt) / 8
+type SharedSecretBytes = lengthSec / 8
+
+type PublicKey    = ByteArray PublicKeyBytes
+type SecretKey    = ByteArray SecretKeyBytes
+type Ciphertext   = ByteArray CiphertextBytes
+type SharedSecret = ByteArray SharedSecretBytes
+
+/**
+ * Properties for key and ciphertext values
+ * Specific to FrodoKEM-1344 parameter set
+ */
+pk_size_correct : Bit
+property pk_size_correct = `PublicKeyBytes    == (21520 : Integer)
+
+sk_size_correct : Bit
+property sk_size_correct = `SecretKeyBytes    == (43088 : Integer)
+
+ct_size_correct : Bit
+property ct_size_correct = `CiphertextBytes   == (21696 : Integer)
+
+ss_size_correct : Bit
+property ss_size_correct = `SharedSecretBytes == (32 : Integer)
+
+/* type constraints */
+type constraint D_leq_16 a  = (fin a, a <= 16)
+type constraint q_2D a b    = (fin a, fin b, a == 2^^b)
+type constraint B_leq_D a b = (fin a, fin b, a <= b)
+
+/**
+ * Converts a bitstring `b` into an octet string (byte array)
+ * by packing bits in little-endian format.
+ */
+encode_octets :
+    {b_str}
+    (fin b_str) =>
+    Bitstring (b_str*8) -> ByteArray b_str
+encode_octets b_bits = b_bytes
+  where
+    b_bytes = [ reverse byte | byte <- groupBy`{8} b_bits ]
+
+/**
+ * Converts an octet string into a bitstring in little-endian format
+ */
+decode_octets :
+    {b_str}
+    (fin b_str) =>
+    ByteArray b_str -> Bitstring (b_str*8)
+decode_octets b_bytes = b_bits
+  where
+    b_bits = join [ reverse chunk | chunk <- b_bytes ]
+
+/**
+ * Property to verify the correctness of `encode_octets` and
+ * `decode_octets` by demonstrating they are inverses.
+ */
+roundtrip_octets :
+    {b_str}
+    (fin b_str) =>
+    Bitstring (b_str*8) -> Bit
+property roundtrip_octets b =
+    decode_octets (encode_octets b) == b
+
+/**
+ * Frodo.Encode
+ */
+frodo_encode : Bitstring l -> FrodoMatrix
+frodo_encode k_bits = K
+  where
+    k_chunks = groupBy`{B} k_bits
+    encoded_coeffs = [ reverse k  # (0: [D-B]) | k <- k_chunks ]
+    K = groupBy`{nbar} encoded_coeffs
+
+/**
+ * Frodo.Decode
+ */
+frodo_decode : FrodoMatrix -> Bitstring l
+frodo_decode K = k_bits
+  where
+    flat_coeffs = join K
+    decoded_coeffs = 
+        [ drop`{D-B}
+          ((c + ((1 : Coeff)
+          << (`(D-B-1) : Coeff)))
+          >> (`(D-B) : Coeff))
+        | c <- flat_coeffs ]
+    k_bits = join [ reverse bits | bits <- decoded_coeffs]
+
+/**
+ Roundtrip for Frodo.Encode/Decode
+ */
+roundtrip_encode_decode : Bitstring l -> Bit
+property roundtrip_encode_decode k = 
+    frodo_decode (frodo_encode k)  == k
+
+/**
+ * Frodo.Pack
+ * Parameters: {n1, n2, D}
+ * Constraints: (fin n1, fin n2, (D*n1*n2) & 8 == 0)
+ */
+frodo_pack : 
+    {n1, n2}
+    ( fin n1
+    , fin n2
+    , (PackBits n1 n2) % 8 == 0
+    ) =>
+    Matrix n1 n2 Coeff -> ByteArray (PackBytes n1 n2)
+frodo_pack C = packed_bytes 
+  where
+    flat_coeffs = join C
+    lsb_coeffs = [ reverse c | c <- flat_coeffs ]
+    bitstring = join lsb_coeffs
+    packed_bytes = encode_octets bitstring
+
+/**
+ * Frodo.Unpack
+ */
+frodo_unpack : 
+    {n1, n2}
+    ( fin n1
+    , fin n2
+    , (PackBits n1 n2) % 8 == 0
+    ) =>
+    ByteArray (PackBytes n1 n2) -> Matrix n1 n2 Coeff
+frodo_unpack packed_bytes = c_matrix
+  where
+    b_bits = decode_octets packed_bytes
+    coeffs_bits = groupBy`{D} b_bits
+    decoded_coeffs = [ reverse c | c <- coeffs_bits ]
+    c_matrix = groupBy`{n2} decoded_coeffs
+
+/**
+ * Roundtrip for Frodo.Pack/Unpack
+ */
+roundtrip_pack_unpack : 
+    {n1, n2}
+    ( fin n1
+    , fin n2
+    , (PackBits n1 n2) % 8 == 0
+    ) =>
+    Matrix n1 n2 Coeff -> Bit
+property roundtrip_pack_unpack m = 
+    frodo_unpack (frodo_pack m)  == m
+
+/**
+ * Frodo.Sample 
+ */
+frodo_sample : Sample -> Integer
+frodo_sample r = e_signed
+  where
+    r0 = r @ (0 : [4])
+    t = sum [ if r @ i then (2 : Integer)^^(i-1) else 0 | i <- [1..15] : [_]Integer ] : Integer
+    e = sum [ if t > x then 1 else 0 | x <- T_x ] : Integer
+    e_signed = if r0 then -e else e
+
+/**
+ * Property to test correctness of Frodo.Sample
+ */
+frodo_sample_range : Sample -> Bit
+property frodo_sample_range r =
+    (frodo_sample r >= -(`d)) /\ (frodo_sample r <= `d)
+
+/**
+ * Frodo.MatrixSample (Section 7.6)
+ * Accepts a sequence of n1*n2 16-bit strings and
+ * produces an n1-by-n2 error matrix using `Frodo.Sample`
+ * on each element.
+ */
+frodo_sample_matrix :
+    {n1, n2}
+    ( fin n1
+    , fin n2
+    ) =>
+    [n1 * n2][16] -> Matrix n1 n2 ZqElem
+frodo_sample_matrix rs = E
+  where
+    flat_e = [ fromInteger (frodo_sample r) | r <- rs ]
+    E = groupBy`{n2} flat_e
+
+/**
+ * Property to verify Frodo.MatrixSample
+ */
+frodo_sample_matrix_range :
+    {n1, n2}
+    ( fin n1
+    , fin n2
+    ) =>
+    [n1 * n2][16] -> Bit
+property frodo_sample_matrix_range R =
+    all (\e -> (toInteger) e >= -(`d) /\ (toInteger) e <= `d)
+    (join (frodo_sample_matrix`{n1, n2} R))
+
+/**
+ * Little-endian 16-bit byte swap
+ */
+le16 : [16] -> [16]
+le16 x = join (reverse (groupBy`{8} x))
+
+le16_sanity : Bit
+property le16_sanity = le16 (0x0001) == 0x0100
+
+/**
+ * Matrix A generation with AES128
+ */
+frodo_gen_aes : SeedA -> PublicMatrixA
+frodo_gen_aes seed_A = A
+  where
+    make_b (i : [16]) (j : [16]) = le16 i # le16 j # (zero : [96])
+    aes_block (i : [16]) (j : [16]) = 
+        [ le16 chunk | chunk <- groupBy`{16} (aesEncrypt (seed_A, make_b i j)) ]
+    flat_coeffs = join [ aes_block i j | i <- [0..n-1], j <- [0,8..n-1] ]
+    A = groupBy`{n} flat_coeffs
+
+/**
+ * SHAKE simulator
+ */
+primitive shake256 : 
+    {in_len, out_len}
+    (fin in_len, fin out_len) =>
+    Bitstring in_len -> Bitstring out_len
+
+/**
+ Matrix Multiplication 
+ */
+matrix_multi : 
+    {rows, inner, cols}
+    (fin inner) =>
+    Matrix rows inner ZqElem -> Matrix inner cols ZqElem -> Matrix rows cols ZqElem
+matrix_multi a b = [ [ dot row col | col <- transpose b ] | row <- a ]
+  where
+    dot xs ys = sum [ x * y | (x, y) <- zip xs ys ]
+
+/**
+ * Matrix Addition
+ */
+matrix_add :
+    {rows, cols}
+    Matrix rows cols ZqElem -> Matrix rows cols ZqElem -> Matrix rows cols ZqElem
+matrix_add a b = zipWith (zipWith(+)) a b
+
+/**
+ * Matrix Subtraction
+ */
+matrix_sub :
+    {rows, cols}
+    Matrix rows cols ZqElem -> Matrix rows cols ZqElem -> Matrix rows cols ZqElem
+matrix_sub a b = zipWith (zipWith (-)) a b
+
+/**
+ * Encode S^T
+ */
+encode_ST : 
+    {r, c}
+    (fin r, fin c) =>
+    Matrix r c ZqElem -> ByteArray (r * c * 2)
+encode_ST m = encode_octets (join (join m))
+
+/**
+ * Decode S^T
+ */
+decode_ST :
+    {r, c}
+    (fin r, fin c) =>
+    ByteArray (r * c * 2) -> Matrix r c ZqElem
+decode_ST bytes = groupBy`{c} coeffs
+  where
+    coeffs = [ join (reverse pair) | pair <- groupBy`{2} bytes ]
+/**
+ * Frodo.KeyGen
+ */
+frodo_keygen : KeyGenRandomness -> (PublicKey, SecretKey)
+frodo_keygen randomness = (pk, sk)
+  where
+    (s : SecretS) = take`{lengthSec} randomness
+    (seed_se : SeedSE) = take`{lengthSE} (drop`{lengthSec} randomness)
+    (z : ZSeed) = drop`{lengthSec + lengthSE} randomness
+    (seed_A : SeedA) = shake256 z
+    (A : PublicMatrixA) = frodo_gen_aes seed_A
+    (r_stream : RStream) = shake256 ((0x5f : Byte) # seed_se)
+    (r_words : [2 * n * nbar][16]) = split r_stream
+    (r_ST, r_E) = splitAt`{n * nbar} r_words
+    (ST : SecretMatrixST) = frodo_sample_matrix`{nbar, n} r_ST
+    (E : ErrorMatrixE) = frodo_sample_matrix`{n, nbar} r_E
+    S = transpose ST
+    (B : PublicMatrixB) = matrix_add`{n, nbar} (matrix_multi`{n, n, nbar} A S) E
+    (b : ByteArray (PackBytes n nbar)) = frodo_pack`{n, nbar} B
+    (pkh : PKHash) = shake256 (seed_A # decode_octets b)
+    pk = encode_octets seed_A # b
+    sk = encode_octets s # encode_octets seed_A # b # encode_ST`{nbar, n} ST # encode_octets pkh
+
+/**
+ * Frodo.Encaps
+ */
+frodo_encap : PublicKey -> EncapRandomness -> (Ciphertext, SharedSecret)
+frodo_encap pk randomness = (ct, ss)
+  where
+    (u : Bitstring lengthSec, salt : Salt) = splitAt`{lengthSec} randomness
+    (pkh : PKHash) = shake256 (decode_octets pk)
+    digest = shake256 (pkh # u # salt)
+    (seed_se : SeedSE, k : Bitstring lengthSec) = splitAt`{lengthSE} digest
+    (r_stream : EncapRStream) = shake256 ((0x96 : Byte) # seed_se)
+    (r_words : [2 * n * nbar + nbar * nbar][16]) = split r_stream
+    (r_S', r_rest) = splitAt`{n * nbar} r_words
+    (r_E', r_E'') = splitAt`{n * nbar} r_rest
+    (S' : SecretMatrixS') = frodo_sample_matrix`{nbar, n} r_S'
+    (E' : ErrorMatrixE') = frodo_sample_matrix`{nbar, n} r_E'
+    (seed_A_bytes : ByteArray (lengthSeedA / 8), b : PackedB) = splitAt`{lengthSeedA / 8} pk
+    seed_A = decode_octets seed_A_bytes
+    (A : PublicMatrixA) = frodo_gen_aes seed_A
+    (B' : PublicMatrixB') = matrix_add`{nbar, n} product_S'A E'
+      where
+        product_S'A = matrix_multi`{nbar, n, n} S' A
+    (c1 : ByteArray (PackBytes nbar n)) = frodo_pack`{nbar, n} B'
+    (E'' : ErrorMatrixE'') = frodo_sample_matrix`{nbar, nbar} r_E''
+    (B : PublicMatrixB) = frodo_unpack`{n, nbar} b
+    (V : FrodoMatrix) = matrix_add`{nbar, nbar} product_S'B E''
+      where
+        product_S'B = matrix_multi`{nbar, n, nbar} S' B
+    (C : FrodoMatrix) = matrix_add`{nbar, nbar} V encoded_u
+      where
+        (encoded_u : FrodoMatrix) = frodo_encode u
+    (c2 : ByteArray (PackBytes nbar nbar)) = frodo_pack`{nbar, nbar} C
+    (ss : SharedSecret) = encode_octets (shake256 (decode_octets c1 # decode_octets c2 # salt # k))
+    (ct : Ciphertext) = encode_octets (decode_octets c1 # decode_octets c2 # salt)
+
+/**
+ * Frodo.Decaps
+ */
+frodo_decaps : Ciphertext -> SecretKey -> SharedSecret
+frodo_decaps ct sk = ss
+  where
+    (c1 : ByteArray (PackBytes nbar n), ct_rest) = splitAt`{PackBytes nbar n} ct
+    (c2 : ByteArray (PackBytes nbar nbar), salt_bytes : ByteArray (lengthSalt / 8)) = splitAt`{PackBytes nbar nbar} ct_rest
+    salt = decode_octets salt_bytes
+    (s_bytes : ByteArray (lengthSec / 8), sk_rest1) = splitAt`{lengthSec / 8} sk
+    (seed_A_bytes : ByteArray (lengthSeedA / 8), sk_rest2) = splitAt`{lengthSeedA / 8} sk_rest1
+    (b : ByteArray (PackBytes n nbar), sk_rest3) = splitAt`{PackBytes n nbar} sk_rest2
+    (ST : ByteArray (nbar * n * 2), pkh_bytes : ByteArray (lengthSec / 8)) = splitAt`{nbar * n * 2} sk_rest3
+    s = decode_octets s_bytes
+    seed_A = decode_octets seed_A_bytes
+    pkh = decode_octets pkh_bytes
+    S = transpose (decode_ST`{nbar, n} ST)
+    B' = frodo_unpack`{nbar, n} c1
+    C = frodo_unpack`{nbar, nbar} c2
+    M = matrix_sub`{nbar, nbar} C (matrix_multi`{nbar, n, nbar} B' S)
+    u' = frodo_decode M
+    digest' = shake256 (pkh # u' # salt)
+    (seed_se' : SeedSE, k' : Bitstring lengthSec) = splitAt`{lengthSE} digest'
+    (r_stream' : EncapRStream) = shake256 ((0x96 : Byte) # seed_se')
+    (r_words' : [2 * n * nbar + nbar * nbar][16]) = split r_stream'
+    (r_S', r_rest') = splitAt`{n * nbar} r_words'
+    (r_E', r_E'') = splitAt`{n * nbar} r_rest'
+    S' = frodo_sample_matrix`{nbar, n} r_S'
+    E' = frodo_sample_matrix`{nbar, n} r_E'
+    A = frodo_gen_aes seed_A
+    B'' = matrix_add`{nbar, n} (matrix_multi`{nbar, n, n} S' A) E'
+    E'' = frodo_sample_matrix`{nbar, nbar} r_E''
+    B = frodo_unpack`{n, nbar} b
+    V = matrix_add`{nbar, nbar} (matrix_multi`{nbar, n, nbar} S' B) E''
+    C' = matrix_add`{nbar, nbar} V (frodo_encode u')
+
+    c1'' = frodo_pack`{nbar, n} B''
+    c2'' = frodo_pack`{nbar, nbar} C'
+
+    k_bar = if (c1 == c1'') && (c2 == c2'') then k' else s
+    ss = encode_octets (shake256 (decode_octets c1 # decode_octets c2 # salt # k_bar)) 

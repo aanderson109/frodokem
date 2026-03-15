@@ -282,10 +282,11 @@ frodo_gen_aes seed_A = A
 /**
  * SHAKE simulator
  */
-primitive shake256 : 
+shake256 : 
     {in_len, out_len}
     (fin in_len, fin out_len) =>
     Bitstring in_len -> Bitstring out_len
+shake256 x = take (x # (zero : [out_len]))
 
 /**
  Matrix Multiplication 
@@ -432,3 +433,12 @@ frodo_decaps ct sk = ss
 
     k_bar = if (c1 == c1'') && (c2 == c2'') then k' else s
     ss = encode_octets (shake256 (decode_octets c1 # decode_octets c2 # salt # k_bar)) 
+
+
+
+frodo_correctness : KeyGenRandomness -> EncapRandomness -> Bit
+property frodo_correctness kg_rand enc_rand =
+    frodo_decaps ct sk == ss
+  where
+    (pk, sk) = frodo_keygen kg_rand
+    (ct, ss) = frodo_encap pk enc_rand

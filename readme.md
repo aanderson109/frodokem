@@ -23,3 +23,5 @@
 
 [3] https://www.microsoft.com/en-us/research/blog/frodokem-a-conservative-quantum-safe-cryptographic-algorithm/
 
+[4] https://github.com/weaversa/cryptol-course/blob/master/cryptol-style.md
+

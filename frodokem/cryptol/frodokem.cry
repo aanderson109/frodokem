@@ -1,7 +1,25 @@
+/**
+ * FrodoKEM-1344-AES Cryptol Specification
+ * 
+ * A formal specification of FrodoKEM-1344 using AES128 for matrix 
+ * generation. Based on the 2025 FrodoKEM Preliminary Specification
+ * Proposal.
+ *
+ * Verified against the NIST Known Answer Tests (KAT) for
+ * FrodoKEM-1344-AES as provided by the design team during the third
+ * round of NIST's PQC competition.
+ *
+ * References:
+ *  - FrodoKEM Specification, Sections 7.1 to 7.7
+ *  - NIST PQC Standardization, Round 3 Submission from frodokem.org
+ *
+ * @author Alex Anderson
+ * @course ECE 5580 Cryptographic Engineering, Virginia Tech
+ * @submissiondate 18 March 2026
+ */
 module frodokem where
 import Primitive::Keyless::Hash::SHA3::Instantiations::SHAKE256 as SHAKE256
 import Primitive::Symmetric::Cipher::Block::AES::Instantiations::AES128 as AES128
-//import AES
 
 /**
  * FrodoKEM-1344 parameter set
@@ -42,8 +60,6 @@ type SecretS          = Bitstring lengthSec
 type Salt             = Bitstring lengthSalt
 type PKHash           = Bitstring lengthSec
 type ZSeed            = Bitstring lengthSeedA
-type SampleVector len = [len]Sample
-type KeyGenSamples    = SampleVector (2 * n * nbar)
 type SecretMatrixST   = Matrix nbar n ZqElem
 type SecretMatrixS    = Matrix n nbar ZqElem
 type SecretMatrixS'   = Matrix nbar n ZqElem
@@ -59,7 +75,6 @@ type EncapRandomness  = Bitstring (lengthSec + lengthSalt)
 type EncapRStreamBits = 16 * (2 * n * nbar + nbar * nbar)
 type EncapRStream     = Bitstring EncapRStreamBits
 type PackedB          = ByteArray (PackBytes n nbar)
-
 
 /**
  * Type aliases for key byte sizes
@@ -92,17 +107,17 @@ property ct_size_correct = `CiphertextBytes   == (21696 : Integer)
 ss_size_correct : Bit
 property ss_size_correct = `SharedSecretBytes == (32 : Integer)
 
-
-
-
-
-
-
-
-
 /**
- * Frodo.Encode
- * Input bitstring is length of `D * nbar**2`
+ * Frodo.Encode (FrodoKEM Specification, Section 7.3)
+ * 
+ * Encodes a bitstring of length l = B * nbar^2 as an nbar-by-nbar
+ * matrix with coefficients in Z_q. Each B-bit chunk `k` is read in
+ * little-endian bit order and scaled by q/2^B, equivalent to a left
+ * shift of (D-B) bits: k * 2^(D-B).
+ *
+ * NOTE: Cryptol's native bit ordering is MSB-first, so input bytes
+ * are reversed per-byte before chunking to match the specification's
+ * little-endian bit ordering for Frodo.Encode.
  */
 frodo_encode : [256]Bit -> Matrix nbar nbar ZqElem
 frodo_encode bitstring = K
@@ -113,28 +128,44 @@ frodo_encode bitstring = K
     encoded_coeffs = [ (reverse k) # (0 : [D-B]) | k <- k_chunks ]
     K = groupBy`{nbar} encoded_coeffs
 
-
-
 /**
- * Frodo.Decode
+ * Frodo.Decode (FrodoKEM Specification, Section 7.3)
+ *
+ * Decodes an nbar-by-nbar matrix with coefficients in Z_q into a
+ * bitstring of length l = B * nbar^2. This is the inverse of
+ * Frodo.Encode.
+ *
+ * Each coefficient from the matrix is rounded to the nearest B-bit
+ * integer implemented here as a shift.
+ *
+ * Note: output bits are reversed per-byte to match the little-endian
+ * format used in the specification. This inverts the transformation
+ * applied in Frodo.Encode, making the roundtrip property true for
+ * both functions.
  */
 frodo_decode : Matrix nbar nbar ZqElem -> [256]Bit
 frodo_decode K = bitstring
   where
     flat_coeffs = join K
-    decoded_chunks = [ reverse (drop`{D-B} ((c + ((1 : ZqElem) << (`(D-B-1): ZqElem)))
+    decoded_chunks = [ reverse (drop`{D-B}
+                        ((c + ((1 : ZqElem) << (`(D-B-1): ZqElem)))
                         >> (`(D-B) : ZqElem)))
-                        | c <- flat_coeffs ]
+                        | c <- flat_coeffs 
+                     ]
     k_le = join decoded_chunks
-    bitstring = join [ reverse b | b <- groupBy`{8} k_le]
-
-
-
+    bitstring = join [ reverse b | b <- groupBy`{8} k_le ]
 
 /**
- * Frodo.Pack
- * Parameters: {n1, n2, D}
- * Constraints: (fin n1, fin n2, (D*n1*n2) & 8 == 0)
+ * Frodo.Pack (FrodoKEM Specification, Section 7.4)
+ * 
+ * Transforms an n1-by-n2 matrix C with coefficients in Z_q into a
+ * byte array by extracting the least significant D-bits from each
+ * coefficient, going row-by-row, and concatenating them into an
+ * octet string (i.e., byte array).
+ *
+ * Each coefficient C_{i,j} is represented as a D-bit string in MSB
+ * order, matching Cryptol's native bit ordering. Therefore, a
+ * reverse is not required here as it was for Frodo.Encode/Decode.
  */
 frodo_pack : 
     {n1, n2}
@@ -145,16 +176,18 @@ frodo_pack :
     Matrix n1 n2 Coeff -> ByteArray (PackBytes n1 n2)
 frodo_pack C = packed_bytes 
   where
-    flat_coeffs = join C
-    //bitstring = join [ reverse c | c <- flat_coeffs ]
-    bitstring = join flat_coeffs
+    bitstring    = join (join C)
     packed_bytes = groupBy`{8} bitstring
 
-
-
-
 /**
- * Frodo.Unpack
+ * Frodo.Unpack (FrodoKEM Specification, Section 7.4)
+ *
+ * Transforms a byte array into an n1-by-n2 matrix with coefficients
+ * in Z_q. This is the inverse of Frodo.Pack.
+ *
+ * The byte array is interpreted as a flat sequence of D-bit strings
+ * in MSB order. Those are then reshaped into an n1-by-n2 matrix
+ * going row-by-row.
  */
 frodo_unpack : 
     {n1, n2}
@@ -167,28 +200,37 @@ frodo_unpack packed_bytes = C
   where
     b_bits = join packed_bytes
     coeffs_bits = groupBy`{D} b_bits
-    //decoded_coeffs = [ reverse c | c <- coeffs_bits ]
     C = groupBy`{n2} coeffs_bits
 
-
-
 /**
- * Frodo.Sample 
+ * Frodo.Sample (FrodoKEM Specification, Section 7.5)
+ *
+ * Samples from the error distribution using inversion sampling
+ * against the CDF table `T_x`. Given a 16-bit input `r`, the LSB `r0`
+ * is used as a sign bit and the remaining 15 bits form the threshold
+ * value `t = r >> 1`.
+ *
+ * The output `e` is a small integer in `{-d, ..., 0, ..., d}` where
+ * `d = 6` for FrodoKEM-1344.
  */
 frodo_sample : Sample -> Integer
 frodo_sample r = e_signed
   where
     r0 = r ! 0
     t = toInteger (r >> 1)
-    e = sum [ if t > T_x @ i then 1 else 0 | i <- [0..d-1]]
+    e = sum [ if t > T_x @ i then 1 else 0 | i <- [0..d-1] ]
     e_signed = if r0 then negate e else e
 
-
 /**
- * Frodo.MatrixSample (Section 7.6)
- * Accepts a sequence of n1*n2 16-bit strings and
- * produces an n1-by-n2 error matrix using `Frodo.Sample`
- * on each element.
+ * Frodo.MatrixSample (FrodoKEM Specification, Section 7.6)
+ *
+ * Samples an n1-by-n2 error matrix by applying Frodo.Sample to each
+ * of the n1*n2 provided 16-bit input strings, filling the matrix
+ * row-by-row from least to most significant coefficient.
+ *
+ * The sampled integer values are converted to Z_q elements via
+ * `fromInteger`, which handles negative values as their two's
+ * complement representation.
  */
 frodo_sample_matrix :
     {n1, n2}
@@ -201,37 +243,70 @@ frodo_sample_matrix rs = E
     flat_e = [ fromInteger (frodo_sample r) | r <- rs ]
     E = groupBy`{n2} flat_e
 
-
-
 /**
- * Little-endian 16-bit byte swap
+ * Little-endian 16-bit byte swap (Helper Function)
+ *
+ * Reverses the two bytes of a 16-bit word to convert between
+ * big-endian (Cryptol-native) and little-endian byte order.
+ * 
+ * Useful for correcting Cryptol's default big-endian style when
+ * interfacing with FrodoKEM's little-endian convention for matrix A
+ * generation and S^T.
  */
 le16 : [16] -> [16]
 le16 x = join (reverse (groupBy`{8} x))
 
+/**
+ * Sanity Check: le16 swaps the two bytes of a 16-bit word.
+ */
 le16_sanity : Bit
 property le16_sanity = le16 (0x0001) == 0x0100
 
-
 /**
- * Matrix A generation with AES128
+ * Frodo.Gen with AES128 (FrodoKEM Specification, Section 7.7.1)
+ *
+ * Generates the n-by-n public matrix A using AES128 as a pseudorandom
+ * function seeded with a 128-bit value `seed_A`. 
+ * 
+ * AES is imported from the Cryptol implementations published online
+ * by Galois, Inc.
  */
 frodo_gen_aes : SeedA -> PublicMatrixA
 frodo_gen_aes seed_A = A
   where
     make_b (i : [16]) (j : [16]) = le16 i # le16 j # (zero : [96])
-    //aes_block i j = [ fromInteger ((toInteger chunk) % `q) | chunk <- groupBy`{16} (AES128::encrypt seed_A (make_b i j))]
-    aes_block i j = [ le16 chunk | chunk <- groupBy`{16} (AES128::encrypt seed_A (make_b i j))]
-    flat_coeffs = join [ aes_block i j | i <- [0..n-1], j <- [0,8..n-1] ]
+    aes_block i j = [ le16 chunk
+                    | chunk <- groupBy`{16} (AES128::encrypt seed_A (make_b i j))
+                    ]
+    flat_coeffs = join [ aes_block i j 
+                       | i <- [0..n-1]
+                       , j <- [0,8..n-1]
+                       ]
     A = groupBy`{n} flat_coeffs
 
 /**
- * SHAKE simulator
+ * SHAKE256 Extendable-Output Function
+ *
+ * Wraps the SHAKE256 implementation from Galois, Inc. to accept and
+ * return bitstrings in MSB order. Input length must be a multiple
+ * of bits.
  */
+shake256 : 
+    {in_len, out_len, in_bytes, out_bytes}
+    ( fin in_len
+    , fin in_bytes
+    , in_bytes * 8 == in_len
+    , out_bytes * 8 == out_len
+    ) =>
+    [in_len]Bit -> [out_len]Bit
 shake256 x = join (SHAKE256::xofBytes (groupBy`{8} x))
 
 /**
- Matrix Multiplication 
+ * Matrix Multiplication Over Z_q
+ * 
+ * Computes A * B for matrices A (rows x inner) and B (inner x cols).
+ * Arithmetic wraps naturally around mod q = 2^16 = 65536 due to the
+ * [16] type.
  */
 matrix_multi : 
     {rows, inner, cols}
@@ -242,7 +317,9 @@ matrix_multi a b = [ [ dot row col | col <- transpose b ] | row <- a ]
     dot xs ys = sum [ x * y | (x, y) <- zip xs ys ]
 
 /**
- * Matrix Addition
+ * Matrix Addition Over Z_q
+ *
+ * Computes A + B with the arithmetic wrapping around mod q = 2^16.
  */
 matrix_add :
     {rows, cols}
@@ -250,7 +327,9 @@ matrix_add :
 matrix_add a b = zipWith (zipWith(+)) a b
 
 /**
- * Matrix Subtraction
+ * Matrix Subtraction Over Z_q
+ *
+ * Computes A - B with the arithmetic wrapping around mod q = 2^16.
  */
 matrix_sub :
     {rows, cols}
@@ -259,14 +338,10 @@ matrix_sub a b = zipWith (zipWith (-)) a b
 
 /**
  * Encode S^T
- 
-encode_ST : 
-    {r, c}
-    (fin r, fin c) =>
-    Matrix r c ZqElem -> ByteArray (r * c * 2)
-encode_ST m = join [ (groupBy`{8} coeff) | coeff <- join m ]
-*/
-
+ *
+ * Serializes an r-by-c matrix of Z_q elements into a byte array by
+ * storing each coefficient as a 16-bit little-endian integer.
+ */
 encode_ST : 
     {r, c}
     (fin r, fin c) =>
@@ -274,55 +349,89 @@ encode_ST :
 encode_ST m = packed
   where
     flat_coeffs = join m
-    packed = join [ groupBy`{8} (le16 c) | c <- flat_coeffs ]
+    packed      = join [ groupBy`{8} (le16 c) | c <- flat_coeffs ]
 
+/**
+ * Decode ST
+ *
+ * Deserializes a byte array into an r-by-c matrix of Z_q elements by
+ * interpreting each 2-byte pair as a 16-bit little-endian integer.
+ * 
+ * This is the inverse of `encode_ST`.
+ */
 decode_ST : 
     {r, c}
     (fin r, fin c) =>
     ByteArray (r * c * 2) -> Matrix r c ZqElem
 decode_ST bytes = groupBy`{c} coeffs
   where
-    pairs = groupBy`{2} bytes
+    pairs  = groupBy`{2} bytes
     coeffs = [ le16 (join pair) | pair <- pairs ]
-    //bitstring = decode_octets_pack bytes
-    //coeff_bits = groupBy`{16} bitstring
-    //coeffs = coeff_bits
 
 
 /**
- * Frodo.KeyGen
+ * Frodo.KeyGen (FrodoKEM Specification, Section 8.1)
+ *
+ * Generates a public/secret key pair from uniform random input.
+ * The randomness is parsed as s || seedSE || z.
+ *
+ * Public key: pk = seed_A || Pack(B)
+ * Secret key: sk = s || seed_A || Pack(B) || encode(S^T) || pkh
  */
 frodo_keygen : KeyGenRandomness -> (PublicKey, SecretKey)
 frodo_keygen randomness = (pk, sk)
   where
-    (s : SecretS) = take`{lengthSec} randomness
+    // Step 1: Parse random input
+    (s : SecretS)      = take`{lengthSec} randomness
     (seed_se : SeedSE) = take`{lengthSE} (drop`{lengthSec} randomness)
-    (z : ZSeed) = drop`{lengthSec + lengthSE} randomness
-    (seed_A : SeedA) = shake256 z
+    (z : ZSeed)        = drop`{lengthSec + lengthSE} randomness
+
+    // Step 2: Generate matrix A from seed_A
+    (seed_A : SeedA)    = shake256 z
     (A : PublicMatrixA) = frodo_gen_aes seed_A
-    (r_stream : RStream) = shake256 ((0x5f : Byte) # seed_se)
+
+    // Step 3: Sample error matrices
+    (r_stream : RStream)                = shake256 ((0x5f : Byte) # seed_se)
     (r_words_raw : [ 2 * n * nbar][16]) = split r_stream
-    r_words = [ le16 w | w <- r_words_raw ]
-    (r_ST, r_E) = splitAt`{n * nbar} r_words
-    (ST : SecretMatrixST) = frodo_sample_matrix`{nbar, n} r_ST
-    (E : ErrorMatrixE) = frodo_sample_matrix`{n, nbar} r_E
-    S = transpose ST
+    r_words                             = [ le16 w | w <- r_words_raw ]
+    (r_ST, r_E)                         = splitAt`{n * nbar} r_words
+    (ST : SecretMatrixST)               = frodo_sample_matrix`{nbar, n} r_ST
+    (E : ErrorMatrixE)                  = frodo_sample_matrix`{n, nbar} r_E
+
+    // Step 4: Compute matrix B = AS + E
+    S                   = transpose ST
     (B : PublicMatrixB) = matrix_add`{n, nbar} (matrix_multi`{n, n, nbar} A S) E
+
+    // Step 5: Assemble keys
     (b : ByteArray (PackBytes n nbar)) = frodo_pack`{n, nbar} B
     pkh = shake256 (seed_A # join b)
-    pk = groupBy`{8} seed_A # b
-    sk = groupBy`{8} s # groupBy`{8} seed_A # b # encode_ST`{nbar, n} ST # groupBy`{8} pkh
+    pk  = groupBy`{8} seed_A # b
+    sk  = groupBy`{8} s # groupBy`{8} seed_A 
+                        # b 
+                        # encode_ST`{nbar, n} ST 
+                        # groupBy`{8} pkh
 
 /**
- * Frodo.Encaps
+ * Frodo.Encaps (FrodoKEM Specification, Section 8.2)
+ *
+ * Encapsulates a shared secret against a public key, producing a
+ * ciphertext and shared secret. The randomness is parsed as u || salt.
+ *
+ * Ciphertext: ct = Pack(B') || Pack(C) || salt
+ * Shared secret: ss = SHAKE256(c1 || c2 || salt || k)
  */
 frodo_encap : PublicKey -> EncapRandomness -> (Ciphertext, SharedSecret)
 frodo_encap pk randomness = (ct, ss)
   where
+    // Step 1: Parse randomness and compute pkh
     (u : Bitstring lengthSec, salt : Salt) = splitAt`{lengthSec} randomness
     (pkh : PKHash) = shake256 (join pk)
+
+    // Step 2: Compute seeds
     digest = shake256 (pkh # u # salt)
     (seed_se : SeedSE, k : Bitstring lengthSec) = splitAt`{lengthSE} digest
+
+    // Step 3: Sample error matrices
     (r_stream : EncapRStream) = shake256 ((0x96 : Byte) # seed_se)
     (r_words_raw : [2 * n * nbar + nbar * nbar][16]) = split r_stream
     r_words = [le16 w | w <- r_words_raw]
@@ -330,14 +439,20 @@ frodo_encap pk randomness = (ct, ss)
     (r_E', r_E'') = splitAt`{n * nbar} r_rest
     (S' : SecretMatrixS') = frodo_sample_matrix`{nbar, n} r_S'
     (E' : ErrorMatrixE') = frodo_sample_matrix`{nbar, n} r_E'
+    (E'' : ErrorMatrixE'') = frodo_sample_matrix`{nbar, nbar} r_E''
+
+    // Step 4: Parse public key and generate matrix A
     (seed_A_bytes : ByteArray (lengthSeedA / 8), b : PackedB) = splitAt`{lengthSeedA / 8} pk
     seed_A = join seed_A_bytes
     (A : PublicMatrixA) = frodo_gen_aes seed_A
+
+    // Step 5: Compute B' and c1
     (B' : PublicMatrixB') = matrix_add`{nbar, n} product_S'A E'
       where
         product_S'A = matrix_multi`{nbar, n, n} S' A
     (c1 : ByteArray (PackBytes nbar n)) = frodo_pack`{nbar, n} B'
-    (E'' : ErrorMatrixE'') = frodo_sample_matrix`{nbar, nbar} r_E''
+
+    // Step 6: Compute C and c2
     (B : PublicMatrixB) = frodo_unpack`{n, nbar} b
     (V : FrodoMatrix) = matrix_add`{nbar, nbar} product_S'B E''
       where
@@ -346,18 +461,27 @@ frodo_encap pk randomness = (ct, ss)
       where
         (encoded_u : FrodoMatrix) = frodo_encode u
     (c2 : ByteArray (PackBytes nbar nbar)) = frodo_pack`{nbar, nbar} C
+
+    // Step 7: Assemble ciphertext and shared secret
     (ss : SharedSecret) = groupBy`{8} (shake256 (join c1 # join c2 # salt # k))
     (ct : Ciphertext) = groupBy`{8} (join c1 # join c2 # salt)
 
 /**
- * Frodo.Decaps
+ * Frodo.Decaps (FrodoKEM Specification, Section 8.3)
+ *
+ * Decapsulates a ciphertext using the secret key to recover the shared
+ * secret. Re-encrypts the decoded message and compares against the
+ * ciphertext to detect tampering.
  */
 frodo_decaps : Ciphertext -> SecretKey -> SharedSecret
 frodo_decaps ct sk = ss
   where
+    // Step 1: Parse ciphertext
     (c1 : ByteArray (PackBytes nbar n), ct_rest) = splitAt`{PackBytes nbar n} ct
     (c2 : ByteArray (PackBytes nbar nbar), salt_bytes : ByteArray (lengthSalt / 8)) = splitAt`{PackBytes nbar nbar} ct_rest
     salt = join salt_bytes
+
+    // Step 2: Parse secret key
     (s_bytes : ByteArray (lengthSec / 8), sk_rest1) = splitAt`{lengthSec / 8} sk
     (seed_A_bytes : ByteArray (lengthSeedA / 8), sk_rest2) = splitAt`{lengthSeedA / 8} sk_rest1
     (b : ByteArray (PackBytes n nbar), sk_rest3) = splitAt`{PackBytes n nbar} sk_rest2
@@ -366,10 +490,14 @@ frodo_decaps ct sk = ss
     seed_A = join seed_A_bytes
     pkh = join pkh_bytes
     S = transpose (decode_ST`{nbar, n} ST)
+
+    // Step 3: Decode message M
     B' = frodo_unpack`{nbar, n} c1
     C = frodo_unpack`{nbar, nbar} c2
     M = matrix_sub`{nbar, nbar} C (matrix_multi`{nbar, n, nbar} B' S)
     u' = frodo_decode M
+
+    // Step 4: Re-compute seeds from decoded message
     digest' = shake256 (pkh # u' # salt)
     (seed_se' : SeedSE, k' : Bitstring lengthSec) = splitAt`{lengthSE} digest'
     (r_stream' : EncapRStream) = shake256 ((0x96 : Byte) # seed_se')
@@ -377,6 +505,8 @@ frodo_decaps ct sk = ss
     r_words' = [ le16 w | w <- r_words_raw' ]
     (r_S', r_rest') = splitAt`{n * nbar} r_words'
     (r_E', r_E'') = splitAt`{n * nbar} r_rest'
+
+    // Step 5: Re-encrypt and compare
     S' = frodo_sample_matrix`{nbar, n} r_S'
     E' = frodo_sample_matrix`{nbar, n} r_E'
     A = frodo_gen_aes seed_A
@@ -385,17 +515,33 @@ frodo_decaps ct sk = ss
     B = frodo_unpack`{n, nbar} b
     V = matrix_add`{nbar, nbar} (matrix_multi`{nbar, n, nbar} S' B) E''
     C' = matrix_add`{nbar, nbar} V (frodo_encode u')
-
     c1'' = frodo_pack`{nbar, n} B''
     c2'' = frodo_pack`{nbar, nbar} C'
 
+    // Step 6: Check for rejection
     k_bar = if (c1 == c1'') && (c2 == c2'') then k' else s
     ss_bits = shake256 (join c1 # join c2 # salt # k_bar)
     ss = groupBy`{8} ss_bits
 
+/**
+ * FrodoKEM Correctness Property
+ *
+ * Verifies that decapsulation recovers the shared secret produced
+ * by encapsulation.
+ */
 frodo_correctness : KeyGenRandomness -> EncapRandomness -> Bit
 property frodo_correctness kg_rand enc_rand =
     frodo_decaps ct sk == ss
   where
     (pk, sk) = frodo_keygen kg_rand
     (ct, ss) = frodo_encap pk enc_rand
+
+/**
+ * FrodoKEM Roundtrip Properties
+ */
+encode_decode_roundtrip : [256]Bit -> Bit
+property encode_decode_roundtrip mu = frodo_decode (frodo_encode mu) == mu
+
+pack_unpack_roundtrip : Matrix 8 8 Coeff -> Bit
+property pack_unpack_roundtrip m = frodo_unpack`{8,8}
+                                   (frodo_pack`{8,8} m) == m

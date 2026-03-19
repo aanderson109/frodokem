@@ -1,0 +1,170 @@
+
+Running all KAT tests...
+
+==================================================
+Testing count=0
+==================================================
+A[0][0] with KAT Seed_A: BV(16, 0x87fa)
+B[0][0] from KAT pk: BV(16, 0xa00f)
+Decaps took: 3088.8 seconds
+Expected ss: 376955161273fc667f3feae5ec98681820dbd759971bb0a2d2bec4510f557e83
+Got ss:      376955161273fc667f3feae5ec98681820dbd759971bb0a2d2bec4510f557e83
+Match:       True
+count=0: PASS
+
+==================================================
+Testing count=1
+==================================================
+A[0][0] with KAT Seed_A: BV(16, 0x80fd)
+B[0][0] from KAT pk: BV(16, 0x7d6e)
+Decaps took: 1905.4 seconds
+Expected ss: 0cf8924412eded85a8bce13953517164ab02c975d38a38fea4a13b504ff49ba1
+Got ss:      0cf8924412eded85a8bce13953517164ab02c975d38a38fea4a13b504ff49ba1
+Match:       True
+count=1: PASS
+
+==================================================
+Testing count=2
+==================================================
+A[0][0] with KAT Seed_A: BV(16, 0x2db2)
+B[0][0] from KAT pk: BV(16, 0x3606)
+Decaps took: 5213.1 seconds
+Expected ss: 38a009a0ce0bb5ac7f22c2ea38b2dee485ffc3aec6e030249565eb2cd5e601d6
+Got ss:      38a009a0ce0bb5ac7f22c2ea38b2dee485ffc3aec6e030249565eb2cd5e601d6
+Match:       True
+count=2: PASS
+
+==================================================
+Testing count=3
+==================================================
+A[0][0] with KAT Seed_A: BV(16, 0x5d36)
+B[0][0] from KAT pk: BV(16, 0xcae1)
+Decaps took: 1857.0 seconds
+Expected ss: 5132b5d557642cf8cae37452422657046fd9cb9f76cd19716fc4020b977bab74
+Got ss:      5132b5d557642cf8cae37452422657046fd9cb9f76cd19716fc4020b977bab74
+Match:       True
+count=3: PASS
+
+==================================================
+Testing count=4
+==================================================
+A[0][0] with KAT Seed_A: BV(16, 0x6f10)
+B[0][0] from KAT pk: BV(16, 0xcd1b)
+Decaps took: 6753.7 seconds
+Expected ss: 706e6b819fab44cf99bbf14132181d20eda94521d8858a7ae6e5246cea2eac25
+Got ss:      706e6b819fab44cf99bbf14132181d20eda94521d8858a7ae6e5246cea2eac25
+Match:       True
+count=4: PASS
+
+==================================================
+Testing count=5
+==================================================
+A[0][0] with KAT Seed_A: BV(16, 0x4cc6)
+B[0][0] from KAT pk: BV(16, 0x9bf7)
+Decaps took: 1963.0 seconds
+Expected ss: 8beec9306c70982aa2b582e9fd96034503fd85adc805ec3b237295ae71d70442
+Got ss:      8beec9306c70982aa2b582e9fd96034503fd85adc805ec3b237295ae71d70442
+Match:       True
+count=5: PASS
+
+==================================================
+Testing count=6
+==================================================
+A[0][0] with KAT Seed_A: BV(16, 0x8a46)
+B[0][0] from KAT pk: BV(16, 0x7197)
+Decaps took: 4522.9 seconds
+Expected ss: f1b772b9c31f9b7ff9cd65a51f27a0904f24d60e60a4a9be28c585fa64fc3dcf
+Got ss:      f1b772b9c31f9b7ff9cd65a51f27a0904f24d60e60a4a9be28c585fa64fc3dcf
+Match:       True
+count=6: PASS
+
+==================================================
+Testing count=7
+==================================================
+A[0][0] with KAT Seed_A: BV(16, 0xf807)
+B[0][0] from KAT pk: BV(16, 0x3eb4)
+Decaps took: 1838.6 seconds
+Expected ss: 6b2dccf814078b9155a6e0a91346cef857c85fc3cd5d46cd46e88c309eecdb99
+Got ss:      6b2dccf814078b9155a6e0a91346cef857c85fc3cd5d46cd46e88c309eecdb99
+Match:       True
+count=7: PASS
+
+==================================================
+Testing count=8
+==================================================
+A[0][0] with KAT Seed_A: BV(16, 0xe657)
+B[0][0] from KAT pk: BV(16, 0xf112)
+Decaps took: 4583.7 seconds
+Expected ss: 448d33f6750e3074586890555f53a67f6423540e7167355c3388b663d31935e5
+Got ss:      448d33f6750e3074586890555f53a67f6423540e7167355c3388b663d31935e5
+Match:       True
+count=8: PASS
+
+==================================================
+Testing count=9
+==================================================
+A[0][0] with KAT Seed_A: BV(16, 0x75e1)
+B[0][0] from KAT pk: BV(16, 0x23c5)
+Decaps took: 1830.0 seconds
+Expected ss: 552aa0b119b63af474bc2d1802b4dfa85c9b73fcc9c541f76c6e0af892a669e9
+Got ss:      552aa0b119b63af474bc2d1802b4dfa85c9b73fcc9c541f76c6e0af892a669e9
+Match:       True
+count=9: PASS
+
+==================================================
+Testing count=10
+==================================================
+A[0][0] with KAT Seed_A: BV(16, 0x9d42)
+B[0][0] from KAT pk: BV(16, 0x6ec4)
+Decaps took: 3644.6 seconds
+Expected ss: ce916a65e2495cde57bee87c26934a4a8de8e030801c1740c36b2aab326b7214
+Got ss:      ce916a65e2495cde57bee87c26934a4a8de8e030801c1740c36b2aab326b7214
+Match:       True
+count=10: PASS
+
+==================================================
+Testing count=11
+==================================================
+A[0][0] with KAT Seed_A: BV(16, 0xd951)
+B[0][0] from KAT pk: BV(16, 0xb0f4)
+Decaps took: 15105.9 seconds
+Expected ss: b1b07a7410bde4af44863bee8b431301c6de2a23111f1d53380873341c1dbeef
+Got ss:      b1b07a7410bde4af44863bee8b431301c6de2a23111f1d53380873341c1dbeef
+Match:       True
+count=11: PASS
+
+==================================================
+Testing count=12
+==================================================
+A[0][0] with KAT Seed_A: BV(16, 0x5aa2)
+B[0][0] from KAT pk: BV(16, 0xf54a)
+Decaps took: 1919.6 seconds
+Expected ss: 67786efdc538ad78a21c4c25ce6e21b17ebf46bf8db70c9eb896cbe3b76b3254
+Got ss:      67786efdc538ad78a21c4c25ce6e21b17ebf46bf8db70c9eb896cbe3b76b3254
+Match:       True
+count=12: PASS
+
+==================================================
+Testing count=13
+==================================================
+A[0][0] with KAT Seed_A: BV(16, 0x0369)
+B[0][0] from KAT pk: BV(16, 0x0ddb)
+Decaps took: 3943.7 seconds
+Expected ss: 30e5c225451f71c62d6d76715c5712c7dd13e8e9780d80fd5325ac052000e14b
+Got ss:      30e5c225451f71c62d6d76715c5712c7dd13e8e9780d80fd5325ac052000e14b
+Match:       True
+count=13: PASS
+
+==================================================
+Testing count=14
+==================================================
+A[0][0] with KAT Seed_A: BV(16, 0x80a2)
+B[0][0] from KAT pk: BV(16, 0xff5c)
+Decaps took: 1896.2 seconds
+Expected ss: 1f85a7e3c8d59be37953b2ae9ed8e3c35210d4705fb26e72a4aab9a76cb413e3
+Got ss:      1f85a7e3c8d59be37953b2ae9ed8e3c35210d4705fb26e72a4aab9a76cb413e3
+Match:       True
+count=14: PASS
+
+==================================================
+Testing count=15

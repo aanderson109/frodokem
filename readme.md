@@ -44,6 +44,10 @@ Match:       True
 Shared secrets matched!
 ```
 
+### Performance Notes
+
+KAT testing was performed on an Apple M4 Max MacBook Pro with 36 GB RAM running macOS Sequoia. Memory consumption was observed at approximately 30 GB during evaluation, with significant swap usage. 15 of 100 KAT entries were verified before terminating due to runtime constraints. In that time, all 15 passed, but each test took between 30-250 minutes depending on memory availability.
+
 
 ## References
 

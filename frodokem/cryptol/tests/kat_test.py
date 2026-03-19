@@ -5,6 +5,7 @@ import cryptol
 import os
 import time
 
+
 @dataclass
 class KATEntry:
     count: int
@@ -62,15 +63,8 @@ def parse_kats(kat_file: Path) -> list[KATEntry]:
                 current = {}
     return entries
 
-def cryptol_api_eval(proj_file: Path, kat_entry: KATEntry) -> bool:
+def cryptol_api_eval(c: cryptol.CryptolConnection, proj_file: Path, kat_entry: KATEntry) -> bool:
     BASE_DIR = Path(__file__).parent
-    cryptol_spec_path = BASE_DIR / "../cryptol-specs"
-    proj_file = BASE_DIR / "../frodokem.cry"
-    os.environ['CRYPTOLPATH'] = str(cryptol_spec_path)
-
-
-    c = cryptol.connect(reset_server=True)
-    c.load_file(str(proj_file))
 
     # step 1: validate frodo_gen_aes with known seed from KAT
     seed_a = kat_entry.pk[:32]
@@ -145,7 +139,7 @@ def cryptol_api_eval(proj_file: Path, kat_entry: KATEntry) -> bool:
 
     return False
 
-def run_all_kats(kat_file: str) -> dict:
+def run_all_kats(c: cryptol.CryptolConnection, kat_file: str) -> dict:
     """Runs the KAT test for all entries in the KAT file.
 
     Args:
@@ -163,9 +157,9 @@ def run_all_kats(kat_file: str) -> dict:
 
     for entry in entries:
         print(f"\n{'='*50}")
-        print(f"Testing count={entry.count}")
+        print(f"Testing count={entry.count}", flush=True)
         print(f"{'='*50}")
-        result = cryptol_api_eval(proj_dir, entry)
+        result = cryptol_api_eval(c, proj_dir, entry)
         if result:
             passed += 1
             print(f"count={entry.count}: PASS")
@@ -201,18 +195,26 @@ def main():
     KAT_FILE = "newer_PQCkemKAT_43088.rsp"
     base_dir, kat_dir, proj_dir = get_dirs(KAT_FILE)
     entries = parse_kats(kat_dir)
-    entry = entries[0]  # tests count=0
 
-    print("running single KAT test (count=0)...")
-    kat_test = cryptol_api_eval(proj_dir, entry)
-    if kat_test:
-        print(f"Shared secrets matched!")
-    else:
-        print(f"Shared secrets did not match -- check debugging values")
+    # connect once
+    cryptol_spec_path = base_dir / "../cryptol-specs"
+    proj_file = base_dir / "../frodokem.cry"
+    os.environ['CRYPTOLPATH'] = str(cryptol_spec_path)
+    c = cryptol.connect(reset_server=True)
+    c.load_file(str(proj_file))
+
+    # single KAT test (count=0)
+    #print("running single KAT test (count=0)...")
+    #entry = entries[0]  # tests count=0
+    #kat_test = cryptol_api_eval(c, proj_dir, entry)
+    #if kat_test:
+    #    print(f"Shared secrets matched!")
+    #else:
+    #    print(f"Shared secrets did not match -- check debugging values")
 
     # uncomment to run all KAT entries (very slow!)
-    # print("\nRunning all KAT tests...")
-    # results = run_all_kats(KAT_FILE)
+    print("\nRunning all KAT tests...")
+    results = run_all_kats(c, KAT_FILE)
 
 if __name__=="__main__":
     main()

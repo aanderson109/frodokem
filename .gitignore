@@ -73,7 +73,7 @@ docs/_build/
 
 # PyBuilder
 .pybuilder/
-target/
+#target/    # commented out to support target/ platform directories
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -215,3 +215,6 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 .DS_Store
+
+# Build directories for the target platforms
+**/build/

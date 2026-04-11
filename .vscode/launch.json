@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug TM4C123G",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "configFiles": [
+                "/opt/homebrew/opt/open-ocd/share/openocd/scripts/board/ti_ek-tm4c123gxl.cfg"
+            ],
+            "executable": "${workspaceFolder}/optimized/target/tm4c123g/build/frodo1344.elf",
+            "runToEntryPoint": "main",
+            "device": "TM4C123GH6PM",
+            "svdFile": ""
+        }
+    ]
+}

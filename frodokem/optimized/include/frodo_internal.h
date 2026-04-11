@@ -87,4 +87,7 @@ int frodo_ct_verify(const uint8_t *a, const uint8_t *b, size_t len);
 void frodo_ct_select(uint8_t *out, const uint8_t *a, const uint8_t *b,
                      size_t len, int selector);
 
+// hardware abstraction layer for AES
+void frodo_aes128_ecb(const uint8_t *key, uint8_t *in, uint8_t *out);
+
 #endif

@@ -191,6 +191,48 @@ def debug_entry(entry: KATEntry):
     print("ct prefix:", entry.ct[:32])
     print("ss prefix:", entry.ss[:32])
 
+# Used to debug C implementation
+def debug_keygen_intermediates(c, randomness_hex: str):
+    """Print KeyGen intermediates from Cryptol given raw randomness bytes."""
+    
+    # parse randomness into s, seed_se, z
+    sec_bytes = 32
+    se_bytes = 64
+    seed_a_bytes = 16
+    
+    s_hex = randomness_hex[:sec_bytes*2]
+    seed_se_hex = randomness_hex[sec_bytes*2:(sec_bytes+se_bytes)*2]
+    z_hex = randomness_hex[(sec_bytes+se_bytes)*2:]
+    
+    print(f"s:       {s_hex[:32]}...")
+    print(f"seed_se: {seed_se_hex[:32]}...")
+    print(f"z:       {z_hex}")
+
+    # seed_A = SHAKE256(z)
+    result = c.evaluate_expression(
+        f"take`{{128}} (shake256 (0x{z_hex} : ZSeed))"
+    ).result()
+    seed_a = f'{int(result):032x}'
+    print(f"seed_A: {seed_a}")
+
+    # r stream = SHAKE256(0x5F || seed_se)
+    # first r_words
+    result = c.evaluate_expression(
+        f"""take`{{5}} [ le16 w | w <- split`{{2*n*nbar}} (take`{{2*n*nbar*16}} (shake256 ((0x5f : Byte) # (0x{seed_se_hex} : SeedSE)))) : [2*n*nbar][16] ]"""
+    ).result()
+    print(f"r_words[0..4]: {result}")
+
+    result = c.evaluate_expression(
+        f"frodo_sample_matrix`{{nbar,n}} (take`{{n*nbar}} [ le16 w | w <- split`{{2*n*nbar}} (take`{{2*n*nbar*16}} (shake256 ((0x5f : Byte) # (0x{seed_se_hex} : SeedSE)))) : [2*n*nbar][16] ])"
+    ).result()
+    print(f"ST[0][0..3]: {[result[0][i] for i in range(4)]}")
+
+    result2 = c.evaluate_expression(
+        f"frodo_sample_matrix`{{n,nbar}} (drop`{{n*nbar}} [ le16 w | w <- split`{{2*n*nbar}} (take`{{2*n*nbar*16}} (shake256 ((0x5f : Byte) # (0x{seed_se_hex} : SeedSE)))) : [2*n*nbar][16] ])"
+    ).result()
+    print(f"E[0][0..3]: {[result2[0][i] for i in range(4)]}")
+
+
 def main():
     KAT_FILE = "newer_PQCkemKAT_43088.rsp"
     base_dir, kat_dir, proj_dir = get_dirs(KAT_FILE)
@@ -203,18 +245,13 @@ def main():
     c = cryptol.connect(reset_server=True)
     c.load_file(str(proj_file))
 
-    # single KAT test (count=0)
-    #print("running single KAT test (count=0)...")
-    #entry = entries[0]  # tests count=0
-    #kat_test = cryptol_api_eval(c, proj_dir, entry)
-    #if kat_test:
-    #    print(f"Shared secrets matched!")
-    #else:
-    #    print(f"Shared secrets did not match -- check debugging values")
+    # hex string from C implementation to debug output
+    keygen_randomness = "7C9935A0B07694AA0C6D10E4DB6B1ADD2FD81A25CCB148032DCD739936737F2DB505D7CFAD1B497499323C8686325E4792F267AAFA3F87CA60D01CB54F29202A3E784CCB7EBCDCFD45542B7F6AF778742E0F4479175084AA488B3B74340678AA38E22E9628B0A161FDEB0BD252173B9C"
+    debug_keygen_intermediates(c, keygen_randomness)
 
     # uncomment to run all KAT entries (very slow!)
-    print("\nRunning all KAT tests...")
-    results = run_all_kats(c, KAT_FILE)
+    #print("\nRunning all KAT tests...")
+    #results = run_all_kats(c, KAT_FILE)
 
 if __name__=="__main__":
     main()

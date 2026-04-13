@@ -17,3 +17,9 @@
 
 `make` provides a clean, layered way of automating the build process.
 
+
+# References
+
+(1) [GNU Linker](https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_toc.html)
+
+

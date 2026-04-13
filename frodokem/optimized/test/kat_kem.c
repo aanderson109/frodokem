@@ -25,10 +25,10 @@
  */
 #include "../include/frodo_internal.h"
 #include "rng/rng_drbg.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <time.h>
 
 #define MAX_MARKER_LEN 50
@@ -47,21 +47,26 @@ static int FindMarker(FILE *infile, const char *marker) {
     int i, len, curr_line;
 
     len = (int)strlen(marker);
-    if (len > MAX_MARKER_LEN - 1) len = MAX_MARKER_LEN - 1;
+    if (len > MAX_MARKER_LEN - 1)
+        len = MAX_MARKER_LEN - 1;
 
     for (i = 0; i < len; i++) {
         curr_line = fgetc(infile);
-        line[i] = curr_line;
-        if (curr_line == EOF) return 0;
+        line[i]   = curr_line;
+        if (curr_line == EOF)
+            return 0;
     }
     line[len] = '\0';
 
     while (1) {
-        if (!strncmp(line, marker, len)) return 1;
-        for (i = 0; i < len - 1; i++) line[i] = line[i + 1];
-        curr_line = fgetc(infile);
+        if (!strncmp(line, marker, len))
+            return 1;
+        for (i = 0; i < len - 1; i++)
+            line[i] = line[i + 1];
+        curr_line     = fgetc(infile);
         line[len - 1] = curr_line;
-        if (curr_line == EOF) return 0;
+        if (curr_line == EOF)
+            return 0;
         line[len] = '\0';
     }
 }
@@ -81,7 +86,7 @@ static int ReadHex(FILE *infile, unsigned char *A, int Length, char *str) {
     int i, ch, started;
     unsigned char ich;
 
-    if (Length == 0) { 
+    if (Length == 0) {
         A[0] = 0x00;
         return 1;
     }
@@ -143,8 +148,8 @@ int main(void) {
     unsigned char seed[48];
     int count;
     int total = 0, passed = 0;
-    clock_t start, end;     // used to time execution
-    double elapsed;         // total time executed
+    clock_t start, end; // used to time execution
+    double elapsed;     // total time executed
 
     fp = fopen("newer_PQCkemKAT_43088.rsp", "r");
     if (fp == NULL) {
@@ -159,7 +164,7 @@ int main(void) {
     start = clock();
 
     while (FindMarker(fp, "count = ")) {
-        
+
         if (fscanf(fp, "%d", &count) != 1) {
             break;
         }
@@ -236,7 +241,7 @@ int main(void) {
     }
 
     // Stop the clock
-    end = clock();
+    end     = clock();
     elapsed = (double)(end - start) / CLOCKS_PER_SEC;
 
     fclose(fp);
@@ -246,6 +251,6 @@ int main(void) {
     printf("KAT: %d/%d passed\n", passed, total);
     printf("Total time: %.2f seconds\n", elapsed);
     printf("Average time per iteration: %.2f seconds \n", elapsed / total);
-    
+
     return (passed == total && total == 100) ? 0 : 1;
 }

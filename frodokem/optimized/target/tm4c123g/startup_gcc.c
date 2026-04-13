@@ -1,32 +1,38 @@
-/*
- * `startup_gcc.c` -> Reset Handler and Vector Table for TM4C123GH6PM
+/**
+ * @file startup_gcc.c
+ * @author Alex Anderson (aandrs@vt.edu)
+ * @brief TM4C123G Startup File with Reset Handler + Interrupt Vector Table
+ * @version 0.1
+ * @date 2026-04-12
+ * 
+ * Defines the ARM Cortex-M4F interrupt vector table and Reset Handler
+ * for the TM4C123GH6PM.
+ * 
+ * @note Exception handlers are weakly aliased to Default_Handler.
+ *       Override any handler by defining the function elsewhere in
+ *       the project.
+ * 
+ * @note The Floating Point Unit (FPU) is not enabled in Reset Handler.
  *
- *  Sources:
- *      - TM4C123GH6PM Datasheet Figure 2-6
- *      - ARM Cortex-M4 TRM
- *      - `hw_memmap.h` from TivaWare Peripheral Library (`driverlib`)
+ * @copyright Copyright (c) 2026
  */
-
-/*  Standard headers  */
 #include <stddef.h>
 #include <stdint.h>
 
-/*  Linker script symbols  */
-extern uint32_t _data_load;
-extern uint32_t _data_start;
-extern uint32_t _data_end;
-extern uint32_t _bss_start;
-extern uint32_t _bss_end;
-extern uint32_t _stack_top;
+/*  Linker Script Symbols  */
+extern uint32_t _data_load;  // start of .data section in flash
+extern uint32_t _data_start; // start of .data in SRAM
+extern uint32_t _data_end;   // end of .data in SRAM
+extern uint32_t _bss_start;  // start of .bss in SRAM
+extern uint32_t _bss_end;    // end of .bss in SRAM
+extern uint32_t _stack_top;  // initial stack pointer
 
-/*  Prototypes  */
+/*  Forward Declarations/Prototypes  */
 void Reset_Handler(void);
 void Default_Handler(void);
 int main(void);
 
-/*  Exception handlers, weak aliased to `Default_Handler`
- *      - Override any of them by defining the function in the user program
- */
+/* Exception Handlers */
 void NMI_Handler(void) __attribute__((weak, alias("Default_Handler")));
 void HardFault_Handler(void) __attribute__((weak, alias("Default_Handler")));
 void MemManage_Handler(void) __attribute__((weak, alias("Default_Handler")));
@@ -36,13 +42,11 @@ void SVC_Handler(void) __attribute__((weak, alias("Default_Handler")));
 void PendSV_Handler(void) __attribute__((weak, alias("Default_Handler")));
 void SysTick_Handler(void) __attribute__((weak, alias("Default_Handler")));
 
-/*
- * Vector Table
- * Placed in `.isr_vector` by the linker script (first in flash)
- * Cortex-M4F reads:
- *      [0]  -> initial stack pointer
- *      [1]  -> reset handler
- *      [2]+ -> exception/interrupt handlers
+/**
+ * @brief Interrupt Vector Table
+ * 
+ * Placed in .isr_vector by the linker script so it can be found
+ * at the start of flash (offset 0x0000.0000).
  */
 __attribute__((used, section(".isr_vector"))) const uintptr_t vector_table[] = {
     (uintptr_t)&_stack_top,        // 0x0000.0000 Initial Stack Pointer
@@ -66,43 +70,47 @@ __attribute__((used, section(".isr_vector"))) const uintptr_t vector_table[] = {
     // needed
 };
 
-/*
- * Reset Handler
- *
- * First code executed following boot/reset. Prepares SRAM then calls `main()`
- * from user program
+/**
+ * @brief First code executed after boot or reset.
+ * 
+ * Performs the minimum C runtime setup required before calling main()
+ * 
+ * @note Sequence is:
+ * @note   1. Copy init data from flash to SRAM
+ * @note   2. Zeros uninit data section
+ * @note   3. Calls main()
+ * @note   4. Hangs if main() returns
  */
 void Reset_Handler(void) {
     uint32_t *src, *dst;
 
-    // Copy initialized data from flash to SRAM
+    /* Copy .data from flash to SRAM */
     src = &_data_load;
     dst = &_data_start;
     while (dst < &_data_end) {
         *dst++ = *src++;
     }
 
-    // Zero `bss`
+    /* Zero data in .bss */
     dst = &_bss_start;
     while (dst < &_bss_end) {
         *dst++ = 0;
     }
 
-    // TODO: Enable FPU before calling code that uses floating point
-
-    // Call `main()`
+    /* Call user program */
     (void)main();
 
-    // If `main()` returns, hang
+    /* Hang if main() returns */
+
     while (1) {
     }
 }
 
-/*
- * Default Handler
- *
- * Catches any unhandled interrupt or fault. Hangs so debugger can identify the
- * problem
+/**
+ * @brief Catch-all handler for unhandled interrupts and faults.
+ * 
+ * Spins indefinitely so a debugger can half execution and identify
+ * which vector triggered the unhandled exception via the IPSR register.
  */
 void Default_Handler(void) {
     while (1) {

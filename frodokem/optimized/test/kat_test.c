@@ -276,12 +276,12 @@ static void test_util(void) {
     frodo_ct_select(out, a, b, 32, 0);
     for (i = 0; i < 32; i++)
         assert(out[i] == 0xBB);
-    
+
     // ct_select -> selector != 0, picks a
     frodo_ct_select(out, a, b, 32, 1);
     for (i = 0; i < 32; i++)
         assert(out[i] == 0xAA);
-    
+
     // SHAKE256 -> same input, same output
     memset(in, 0, sizeof(in));
     frodo_shake256(h1, 32, in, 16);

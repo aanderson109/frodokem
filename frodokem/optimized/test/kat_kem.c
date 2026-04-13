@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
 
 #define MAX_MARKER_LEN 50
 #define KAT_COUNTS     1   /* only verify count=0 for now */
@@ -81,171 +82,83 @@ int main(void) {
     FILE *fp;
     unsigned char seed[48];
     int count;
+    int total = 0, passed = 0;
+
+    // Used to measure execution time
+    clock_t start, end;
+    double elapsed;
 
     fp = fopen("newer_PQCkemKAT_43088.rsp", "r");
     if (fp == NULL) {
         printf("ERROR: could not open newer_PQCkemKAT_43088.rsp\n");
-        printf("       place the KAT file in the test/ directory\n");
         return 1;
     }
 
     printf("FrodoKEM-1344-AES KAT Verification\n");
     printf("=====================================\n\n");
 
-    /* read count=0 only */
-    if (!FindMarker(fp, "count = ")) {
-        printf("ERROR: could not find count field\n");
-        fclose(fp);
-        return 1;
-    }
-    if (fscanf(fp, "%d", &count) != 1) {
-        printf("ERROR: could not read count\n");
-        fclose(fp);
-        return 1;
-    }
-    printf("count = %d\n", count);
+    // Start the clock
+    start = clock();
 
-    /* read seed */
-    if (!ReadHex(fp, seed, 48, "seed = ")) {
-        printf("ERROR: could not read seed\n");
-        fclose(fp);
-        return 1;
-    }
+    while (FindMarker(fp, "count = ")) {
+        if (fscanf(fp, "%d", &count) != 1) break;
 
-    /* seed the DRBG */
-    randombytes_init(seed, NULL, 256);
+        if (!ReadHex(fp, seed, 48, "seed = ")) break;
 
-    /* KeyGen */
-    frodo_keygen(kat_pk, kat_sk);
+        randombytes_init(seed, NULL, 256);
 
-    /* read expected pk, sk */
-    if (!ReadHex(fp, kat_pk_rsp, FRODO_PK_BYTES, "pk = ")) {
-        printf("ERROR: could not read pk\n");
-        fclose(fp);
-        return 1;
-    }
-    if (!ReadHex(fp, kat_sk_rsp, FRODO_SK_BYTES, "sk = ")) {
-        printf("ERROR: could not read sk\n");
-        fclose(fp);
-        return 1;
-    }
+        frodo_keygen(kat_pk, kat_sk);
 
-    /* compare pk */
-    if (memcmp(kat_pk, kat_pk_rsp, FRODO_PK_BYTES) != 0) {
-        printf("[FAIL] pk does not match KAT\n");
-        
-        // FIND FIRST BYTE THAT IS DIFFERENT
-        for (int i = 0; i < FRODO_PK_BYTES; i++) {
-            if (kat_pk[i] != kat_pk_rsp[i]) {
-                printf("    first diff at byte %d\n", i);
-                printf("    got:    ");
-                for (int j = i; j < i + 16 && j < FRODO_PK_BYTES; j++) {
-                    printf("%02X", kat_pk[j]);
-                }
-                printf("...\n");
-                printf("    expected: ");
-                for (int j = i; j < i + 16 && j < FRODO_PK_BYTES; j++) {
-                    printf("%02X", kat_pk_rsp[j]);
-                }
-                printf("...\n");
-                break;
-            }
+        if (!ReadHex(fp, kat_pk_rsp, FRODO_PK_BYTES, "pk = ")) break;
+        if (!ReadHex(fp, kat_sk_rsp, FRODO_SK_BYTES, "sk = ")) break;
+
+        if (memcmp(kat_pk, kat_pk_rsp, FRODO_PK_BYTES) != 0) {
+            printf("[FAIL] count=%d pk mismatch\n", count);
+            fclose(fp);
+            return 1;
         }
-        fclose(fp);
-        return 1;
-    }
-    printf("[PASS] pk matches KAT\n");
-
-    /* compare sk */
-    if (memcmp(kat_sk, kat_sk_rsp, FRODO_SK_BYTES) != 0) {
-        printf("[FAIL] sk does not match KAT\n");
-
-        // PRINT FIRST BYTE THAT IS DIFFERENT
-        for (int i = 0; i < FRODO_SK_BYTES; i++) {
-            if (kat_sk[i] != kat_sk_rsp[i]) {
-                printf("  first diff byte at %d\n", i);
-                printf("  got:  ");
-                for (int j = i; j < i + 16 && j < FRODO_SK_BYTES; j++) {
-                    printf("%02X", kat_sk[j]);
-                }
-                printf("...\n");
-                printf("  expected: ");
-                for (int j = i; j < i + 16 && j < FRODO_SK_BYTES; j++) {
-                    printf("%02X", kat_sk_rsp[j]);
-                }
-                printf("...\n");
-                break;
-            }
+        if (memcmp(kat_sk, kat_sk_rsp, FRODO_SK_BYTES) != 0) {
+            printf("[FAIL] count=%d sk mismatch\n", count);
+            fclose(fp);
+            return 1;
         }
-        fclose(fp);
-        return 1;
-        /*
-        printf("  got:      ");
-        for (int i = 0; i < 16; i++) printf("%02X", kat_sk[i]);
-        printf("...\n");
-        printf("  expected: ");
-        for (int i = 0; i < 16; i++) printf("%02X", kat_sk_rsp[i]);
-        printf("...\n");
-        fclose(fp);
-        return 1; */
-    }
-    printf("[PASS] sk matches KAT\n");
 
-    /* Encaps */
-    frodo_encaps(kat_ct, kat_ss_enc, kat_pk);
+        frodo_encaps(kat_ct, kat_ss_enc, kat_pk);
 
-    /* read expected ct, ss */
-    if (!ReadHex(fp, kat_ct_rsp, FRODO_CT_BYTES, "ct = ")) {
-        printf("ERROR: could not read ct\n");
-        fclose(fp);
-        return 1;
-    }
-    if (!ReadHex(fp, kat_ss_rsp, FRODO_SS_BYTES, "ss = ")) {
-        printf("ERROR: could not read ss\n");
-        fclose(fp);
-        return 1;
+        if (!ReadHex(fp, kat_ct_rsp, FRODO_CT_BYTES, "ct = ")) break;
+        if (!ReadHex(fp, kat_ss_rsp, FRODO_SS_BYTES, "ss = ")) break;
+
+        if (memcmp(kat_ct, kat_ct_rsp, FRODO_CT_BYTES) != 0) {
+            printf("[FAIL] count=%d ct mismatch\n", count);
+            fclose(fp);
+            return 1;
+        }
+        if (memcmp(kat_ss_enc, kat_ss_rsp, FRODO_SS_BYTES) != 0) {
+            printf("[FAIL] count=%d ss mismatch\n", count);
+            fclose(fp);
+            return 1;
+        }
+
+        frodo_decaps(kat_ss_dec, kat_ct, kat_sk);
+        if (memcmp(kat_ss_dec, kat_ss_enc, FRODO_SS_BYTES) != 0) {
+            printf("[FAIL] count=%d decaps mismatch\n", count);
+            fclose(fp);
+            return 1;
+        }
+
+        printf("[PASS] count=%d\n", count);
+        passed++;
+        total++;
     }
 
-    /* compare ct */
-    if (memcmp(kat_ct, kat_ct_rsp, FRODO_CT_BYTES) != 0) {
-        printf("[FAIL] ct does not match KAT\n");
-        printf("  got:      ");
-        for (int i = 0; i < 16; i++) printf("%02X", kat_ct[i]);
-        printf("...\n");
-        printf("  expected: ");
-        for (int i = 0; i < 16; i++) printf("%02X", kat_ct_rsp[i]);
-        printf("...\n");
-        fclose(fp);
-        return 1;
-    }
-    printf("[PASS] ct matches KAT\n");
-
-    /* compare ss */
-    if (memcmp(kat_ss_enc, kat_ss_rsp, FRODO_SS_BYTES) != 0) {
-        printf("[FAIL] ss does not match KAT\n");
-        printf("  got:      ");
-        for (int i = 0; i < 16; i++) printf("%02X", kat_ss_enc[i]);
-        printf("...\n");
-        printf("  expected: ");
-        for (int i = 0; i < 16; i++) printf("%02X", kat_ss_rsp[i]);
-        printf("...\n");
-        fclose(fp);
-        return 1;
-    }
-    printf("[PASS] ss matches KAT\n");
-
-    /* Decaps */
-    frodo_decaps(kat_ss_dec, kat_ct, kat_sk);
-    if (memcmp(kat_ss_dec, kat_ss_enc, FRODO_SS_BYTES) != 0) {
-        printf("[FAIL] decaps ss does not match encaps ss\n");
-        fclose(fp);
-        return 1;
-    }
-    printf("[PASS] decaps ss matches encaps ss\n");
-
-    printf("\n=====================================\n");
-    printf("KAT PASSED -- count=0 verified\n");
+    // Stop the clock
+    end = clock();
+    elapsed = (double)(end - start) / CLOCKS_PER_SEC;
 
     fclose(fp);
-    return 0;
+    printf("\n=====================================\n");
+    printf("KAT: %d/%d passed\n", passed, total);
+    printf("Total time: %.2f seconds\n", elapsed);
+    printf("Average time per iteration: %.2f seconds \n", elapsed / total);
+    return (passed == total && total == 100) ? 0 : 1;
 }

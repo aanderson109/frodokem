@@ -1,29 +1,36 @@
-/*
- * Software AES128 Hardware Abstraction Layer (`hal_aes_soft.c`)
+/**
+ * @file hal_aes_soft.c
+ * @author Alex Anderson (aandrs@vt.edu)
+ * @brief Software AES128 Hardware Abstraction Layer
+ * @version 0.1
+ * @date 2026-04-12
+ * 
+ * Implements frodo_aes128_ecb for host-side testing using the
+ * tiny-AES library. Used by frodo_gen_A_row to generate the
+ * public matrix A on-the-fly, row-by-row.
+ * 
+ * @note On the TM4C123G/TM4C1294 target platforms, this file
+ *       is replaced by hal_aes.c.
  *
- * Ussed for host-side testing of FrodoKEM algorithm
+ * @see FrodoKEM Preliminary Standardization Proposal
+ * @see https://frodokem.org
  *
- * Implements AES128 generation for Public Matrix A using
- * the Tiny-AES library
- *
- * On the TM4C microcontroller, this is replaced by the hardware
- * acceleration
+ * @copyright Copyright (c) 2026
  */
-
 #include "../include/frodo_internal.h"
 #include "aes.h"
 #include <stdint.h>
 #include <string.h>
 
-/*
- * AES128 as PRF (`frodo_aes128_ecb`)
- *
- * Encrypts on 16-byte block using AES128-ECB
- *
- * Parameters:
- *     `key` : 16-byte AES key (`seed_A`)
- *     `in`  : 16-byte plaintext input block
- *     `out` : 16-byte ciphertext output block
+/**
+ * @brief Encrypt one 16-byte block using AES128-ECB.
+ * 
+ * Implements the AES128 pseudorandom function used by
+ * Frodo.Gen to generate the public matrix A.
+ * 
+ * @param[in]   key 16-byte (128-bit) AES128 key
+ * @param[in]   in  16-byte plaintext input block
+ * @param[out]  out 16-byte ciphertext output block
  */
 void frodo_aes128_ecb(const uint8_t *key, const uint8_t *in, uint8_t *out) {
     struct AES_ctx ctx;

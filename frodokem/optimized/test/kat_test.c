@@ -315,8 +315,6 @@ static void test_util(void) {
  * and rejection of a tampered second ciphertext.
  */
 static void test_kem(void) {
-    uint8_t zeros[FRODO_SS_BYTES];
-
     // KeyGen -> Encaps -> Decaps roundtrip
     frodo_keygen(pk, sk);
     frodo_encaps(ct, ss_enc, pk);

@@ -24,14 +24,13 @@
  * @copyright Copyright (c) 2026
  */
 #include "../include/frodo_internal.h"
+#include "../include/frodokem.h"
 #include "rng/rng_drbg.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-#define MAX_MARKER_LEN 50
 
 /**
  * @brief Scan a infile for a specific marker string.

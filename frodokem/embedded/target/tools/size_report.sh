@@ -13,9 +13,30 @@
 #   tm4c123g/build/size_report.txt
 # =============================================================================
 
-BUILD=tm4c123g/build
-OUT=$BUILD/size_report.txt
-SIZE=arm-none-eabi-size
+# Parse TARGET argument
+for arg in "$@"; do
+    case $arg in
+        TARGET=*) TARGET="${arg#TARGET=}" ;;
+    esac
+done
+
+# Default to tm4c123g if not specified
+TARGET=${TARGET:-tm4c123g}
+
+# Set paths based on TARGET
+BUILD=${TARGET}/build
+OUT=${BUILD}/size_report.txt
+
+# Set size tool based on target
+if [ "$TARGET" = "tm4c123g" ]; then
+    SIZE=arm-none-eabi-size
+else
+    SIZE=size
+fi
+
+#BUILD=tm4c123g/build
+#OUT=$BUILD/size_report.txt
+#SIZE=arm-none-eabi-size
 
 echo "FrodoKEM-1344-AES ARM Cortex-M4F Size Report" > $OUT
 echo "Generated: $(date)"                           >> $OUT
@@ -47,6 +68,7 @@ MODULES=(
     "hal_rng.o  RNG HAL"
     "main.o     Board init and KEM runner"
     "startup_gcc.o Reset handler and vector table"
+    "syscalls.o Newlib bare-metal syscall stubs"
 )
 
 TOTAL_TEXT=0
@@ -67,9 +89,9 @@ for entry in "${MODULES[@]}"; do
     $SIZE -A $PATH_OBJ                        >> $OUT
 
     # Extract .text and .bss for totals
-    TEXT=$($SIZE -A $PATH_OBJ | awk '/^\.text/{print $2}' | head -1)
-    BSS=$($SIZE -A $PATH_OBJ  | awk '/^\.bss/{print $2}'  | head -1)
-    DATA=$($SIZE -A $PATH_OBJ | awk '/^\.data/{print $2}' | head -1)
+    TEXT=$($SIZE -A $PATH_OBJ | awk '/^\.text/{sum+=$2} END{print sum+0}')
+    BSS=$($SIZE -A $PATH_OBJ  | awk '/^\.bss/{sum+=$2} END{print sum+0}')
+    DATA=$($SIZE -A $PATH_OBJ | awk '/^\.data/{sum+=$2} END{print sum+0}')
 
     TEXT=${TEXT:-0}
     BSS=${BSS:-0}

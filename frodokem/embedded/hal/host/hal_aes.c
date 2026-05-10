@@ -1,5 +1,5 @@
 /**
- * @file hal_aes_soft.c
+ * @file hal_aes.c
  * @author Alex Anderson (aandrs@vt.edu)
  * @brief Software AES128 Hardware Abstraction Layer
  * @version 0.1
@@ -17,8 +17,8 @@
  *
  * @copyright Copyright (c) 2026
  */
-#include "../include/frodo_internal.h"
-#include "aes.h"
+#include "../../include/frodo_internal.h"
+#include "../common/aes.h"
 #include <stdint.h>
 #include <string.h>
 

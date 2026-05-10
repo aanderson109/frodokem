@@ -10,7 +10,7 @@
  * 
  * Timing uses SysTick at 80 MHz
  * 
- * @note randombytes is provided by hal_rng.c
+ * @note randombytes is provided by hal/tm4c13g/hal_rng.c
  * 
  * @warning if build with FRODO_RNG_FIXED the output is deterministic and
  *          not cryptographically secure.
@@ -24,15 +24,15 @@
 
 #define PART_TM4C123GH6PM
 
-#include "../../include/frodo_internal.h"
-#include "../../target/tivaware/driverlib/gpio.h"
-#include "../../target/tivaware/driverlib/pin_map.h"
-#include "../../target/tivaware/driverlib/sysctl.h"
-#include "../../target/tivaware/driverlib/systick.h"
-#include "../../target/tivaware/driverlib/uart.h"
-#include "../../target/tivaware/inc/hw_memmap.h"
-#include "../../target/tivaware/inc/hw_types.h"
-#include "../../target/tivaware/inc/tm4c123gh6pm.h"
+#include "../../include/frodokem.h"
+#include "../vendor/tivaware/driverlib/gpio.h"
+#include "../vendor/tivaware/driverlib/pin_map.h"
+#include "../vendor/tivaware/driverlib/sysctl.h"
+#include "../vendor/tivaware/driverlib/systick.h"
+#include "../vendor/tivaware/driverlib/uart.h"
+#include "../vendor/tivaware/inc/hw_memmap.h"
+#include "../vendor/tivaware/inc/hw_types.h"
+#include "../vendor/tivaware/inc/tm4c123gh6pm.h"
 
 /* Pin & Peripheral Constants */
 #define LED_PERIPH SYSCTL_PERIPH_GPIOF
@@ -51,11 +51,11 @@
 #define BAUD_RATE 115200UL
 
 /* KEM Buffers */
-static uint8_t pk[FRODO_PK_BYTES];
-static uint8_t sk[FRODO_SK_BYTES];
-static uint8_t ct[FRODO_CT_BYTES];
-static uint8_t ss_enc[FRODO_SS_BYTES];
-static uint8_t ss_dec[FRODO_SS_BYTES];
+static uint8_t pk[FRODO_PUBLICKEYBYTES];
+static uint8_t sk[FRODO_SECRETKEYBYTES];
+static uint8_t ct[FRODO_CIPHERTEXTBYTES];
+static uint8_t ss_enc[FRODO_BYTES];
+static uint8_t ss_dec[FRODO_BYTES];
 
 /* Function Prototypes */
 static void clock_init(void);
@@ -122,16 +122,16 @@ int main(void) {
     uart_print("[UART] 115200 8N1 via ICDI\r\n\r\n");
     /* Print key sizes */
     uart_print("[SIZE] pk  = ");
-    uart_print_dec(FRODO_PK_BYTES);
+    uart_print_dec(FRODO_PUBLICKEYBYTES);
     uart_print(" bytes\r\n");
     uart_print("[SIZE] sk  = ");
-    uart_print_dec(FRODO_SK_BYTES);
+    uart_print_dec(FRODO_SECRETKEYBYTES);
     uart_print(" bytes\r\n");
     uart_print("[SIZE] ct  = ");
-    uart_print_dec(FRODO_CT_BYTES);
+    uart_print_dec(FRODO_CIPHERTEXTBYTES);
     uart_print(" bytes\r\n");
     uart_print("[SIZE] ss  = ");
-    uart_print_dec(FRODO_SS_BYTES);
+    uart_print_dec(FRODO_BYTES);
     uart_print(" bytes\r\n\r\n");
 
     /* ── Frodo.KeyGen ── */
@@ -186,7 +186,7 @@ int main(void) {
     uart_print("\r\n\r\n");
 
     /* ── Verify shared secrets match ── */
-    ss_match = (memcmp(ss_enc, ss_dec, FRODO_SS_BYTES) == 0);
+    ss_match = (memcmp(ss_enc, ss_dec, FRODO_BYTES) == 0);
 
     uart_print("========================================\r\n");
     uart_print("[RESULT] Shared secret match: ");

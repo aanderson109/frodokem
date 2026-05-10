@@ -33,9 +33,11 @@
 #include <stdbool.h>
 
 #define PART_TM4C123GH6PM
-#include "../tivaware/driverlib/adc.h"
-#include "../tivaware/driverlib/sysctl.h"
-#include "../tivaware/inc/hw_memmap.h"
+#define FRODO_RNG_FIXED
+
+#include "../../target/vendor/tivaware/driverlib/adc.h"
+#include "../../target/vendor/tivaware/driverlib/sysctl.h"
+#include "../../target/vendor/tivaware/inc/hw_memmap.h"
 
 /* Option A: ADC Noise Harvesting */
 #ifdef FRODO_RNG_ADC
@@ -59,7 +61,7 @@ static void adc_noise_init(void) {
 
     /* Sequencer 3: single sample, processor trigger, highest priority */
     ADCSequenceConfigure(ADC0_BASE, 3, ADC_TRIGGER_PROCESSOR, 0);
-    ADCSequenceStepConfigure(ADC0_BASE, 3, 0, ADC_CTL_CHO | ADC_CTL_IE | ADC_CTL_END);
+    ADCSequenceStepConfigure(ADC0_BASE, 3, 0, ADC_CTL_CH0 | ADC_CTL_IE | ADC_CTL_END);
     ADCSequenceEnable(ADC0_BASE, 3);
     ADCIntClear(ADC0_BASE, 3);
 }
@@ -94,7 +96,7 @@ static uint32_t adc_sample(void) {
  */
 void randombytes(uint8_t *buf, size_t len) {
     static uint8_t initialized = 0;
-    if (!initalized) {
+    if (!initialized) {
         adc_noise_init();
         initialized = 1;
     }
@@ -112,7 +114,7 @@ void randombytes(uint8_t *buf, size_t len) {
 }
 
 /* Option B: Fixed Seed */
-#else   // FRODO_RNG_FIXED
+#elif defined(FRODO_RNG_FIXED) // FRODO_RNG_FIXED
 
 /**
  * @brief Fill buffer with deterministic bytes derived from a fixed seed.
@@ -145,4 +147,6 @@ void randombytes(uint8_t *buf, size_t len) {
     frodo_shake256(buf, len, input, sizeof(input));
 }
 
+#else
+#error "No RNG implementation selected. Define FRODO_RNG_ADC or FRODO_RNG_FIXED for hal_rng.c."
 #endif // FRODO_RNG_ADC

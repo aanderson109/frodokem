@@ -23,7 +23,7 @@
  * @copyright Copyright (c) 2026
  */
 #include "../../include/frodo_internal.h"
-#include "../../test/aes.h"
+#include "../common/aes.h"
 #include <stdint.h>
 #include <string.h>
 

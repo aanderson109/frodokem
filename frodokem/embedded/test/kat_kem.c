@@ -151,7 +151,7 @@ int main(void) {
     clock_t start, end; // used to time execution
     double elapsed;     // total time executed
 
-    fp = fopen("newer_PQCkemKAT_43088.rsp", "r");
+    fp = fopen("../test/newer_PQCkemKAT_43088.rsp", "r");
     if (fp == NULL) {
         printf("ERROR: could not open newer_PQCkemKAT_43088.rsp\n");
         return 1;

@@ -24,10 +24,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#ifndef FRODO_TARGET
-#include <stdio.h>
-#endif
-
 /**
  * @brief Constant-time byte array comparison
  * 
@@ -115,39 +111,3 @@ void frodo_unpack_le16(uint16_t *out, const uint8_t *in, size_t n) {
         out[i] = (uint16_t)in[2 * i] | ((uint16_t)in[2 * i + 1] << 8);
     }
 }
-
-/**
- * @brief Fill a buffer with uniform random bytes.
- * 
- * Host implementation reads from /dev/urandom.
- * 
- * @param[out]  buf  Output buffer
- * @param[in]   len  Number of random bytes requested
- * 
- * @note TODO: use hardware RNG via TivaWare (if available)
- * @note When FRODO_KAT_TEST is defined, this function is omitted
- *       and replaced by the NIST AES-256 CTR DRBG in rng_drbg.c
- *       for deterministic KAT testing.
- * 
- * @warning Not suitable for the TM4C target until hardware RNG
- *          is implemented
- */
-#ifndef FRODO_KAT_TEST
-void randombytes(uint8_t *buf, size_t len) {
-#ifndef FRODO_TARGET
-    FILE *f = fopen("/dev/urandom", "rb");
-    if (f == NULL) {
-        return;
-    }
-    if (fread(buf, 1, len, f) != len) {
-        fclose(f);
-        return;
-    }
-    fclose(f);
-#else
-    /* TODO: implement using TivaWare hardware RNG */
-    (void)buf;
-    (void)len;
-#endif
-}
-#endif

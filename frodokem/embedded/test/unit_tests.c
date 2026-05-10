@@ -1,5 +1,5 @@
 /**
- * @file kat_test.c
+ * @file unit_tests.c
  * @author Alex Anderson (aandrs@vt.edu)
  * @brief FrodoKEM-1344-AES Unit & Functionality Tests
  * @version 0.1

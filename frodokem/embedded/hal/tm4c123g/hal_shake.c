@@ -29,7 +29,7 @@
  * @copyright Copyright (c) 2026
  */
 #include "../../include/frodo_internal.h"
-#include "../test/fips202.h"
+#include "../common/fips202.h"
 #include <stddef.h>
 #include <stdint.h>
 

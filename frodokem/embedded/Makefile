@@ -49,8 +49,8 @@ CFLAGS = \
 all: test
 
 # Run tests (approx. 31 across all modules)
-test: $(BUILD_DIR)/kat_test
-	$(BUILD_DIR)/kat_test
+test: $(BUILD_DIR)/unit_tests
+	$(BUILD_DIR)/unit_tests
 	@echo ""
 	@echo "All tests passed."
 
@@ -84,8 +84,8 @@ COMMON_OBJS = \
 # -------------------------------------------
 
 # Unit test binary
-$(BUILD_DIR)/kat_test: \
-		$(BUILD_DIR)/kat_test.o \
+$(BUILD_DIR)/unit_tests: \
+		$(BUILD_DIR)/unit_tests.o \
 		$(BUILD_DIR)/util.o		\
 		$(COMMON_OBJS)			\
 		| $(BUILD_DIR)
@@ -133,6 +133,7 @@ $(BUILD_DIR)/util.o: $(SRC_DIR)/util.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 # util_kat.o
+# KAT build compiles util.c without randombytes
 $(BUILD_DIR)/util_kat.o: $(SRC_DIR)/util.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -DFRODO_KAT_TEST -c -o $@ $<
 
@@ -157,6 +158,7 @@ $(BUILD_DIR)/fips202.o: fips202.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 # rng_drbg.o -> NIST AES-256 CTR DRBG via OpenSSL
+# KAT build gets randombytes from rng_drbg.c
 $(BUILD_DIR)/rng_drbg.o: rng/rng_drbg.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -I$(OPENSSL_INC) -Wno-deprecated-declarations -c -o $@ $<
 
@@ -164,8 +166,8 @@ $(BUILD_DIR)/rng_drbg.o: rng/rng_drbg.c | $(BUILD_DIR)
 # COMPILE RULES (TEST HARNESS)
 # -------------------------------------------
 
-# kat_test.o
-$(BUILD_DIR)/kat_test.o: kat_test.c | $(BUILD_DIR)
+# unit_tests.o
+$(BUILD_DIR)/unit_tests.o: unit_tests.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 # kat_kem.o -> includes OpenSSL headers + DRBG

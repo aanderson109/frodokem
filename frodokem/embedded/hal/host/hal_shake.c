@@ -1,5 +1,5 @@
 /**
- * @file hal_shake_soft.c
+ * @file hal_shake.c
  * @author Alex Anderson (aandrs@vt.edu)
  * @brief Software SHAKE256 Hardware Abstraction Layer
  * @version 0.1
@@ -17,8 +17,8 @@
  *
  * @copyright Copyright (c) 2026
  */
-#include "../include/frodo_internal.h"
-#include "fips202.h"
+#include "../../include/frodo_internal.h"
+#include "../common/fips202.h"
 #include <stddef.h>
 #include <stdint.h>
 

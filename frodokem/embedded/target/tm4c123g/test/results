@@ -1,0 +1,335 @@
+FrodoKEM-1344-AES ARM Cortex-M4F Size Report
+Generated: Mon Apr 13 18:12:54 EDT 2026
+Compiler:  GNU size (Arm GNU Toolchain 15.2.Rel1 (Build arm-15.86)) 2.45.1.20251203
+Target:    TM4C123GH6PM (Cortex-M4F)
+Flags:     -mcpu=cortex-m4 -mthumb -O2
+
+=============================================
+
+--- Per-module breakdown ---
+
+--- kem.o (KeyGen/Encaps/Decaps) ---
+tm4c123g/build/kem.o  :
+section                size   addr
+.text                     0      0
+.data                     0      0
+.bss                      0      0
+.text.frodo_keygen      528      0
+.text.frodo_encaps      660      0
+.text.frodo_decaps      836      0
+.bss.ss_in.0          21728      0
+.bss.packed_Cp.1        128      0
+.bss.packed_Bpp.2     21504      0
+.bss.Cp.3               128      0
+.bss.encoded_u.4        128      0
+.bss.V.5                128      0
+.bss.B.6              21504      0
+.bss.Bpp.7            21504      0
+.bss.Epp.8              128      0
+.bss.Ep.9             21504      0
+.bss.Sp.10            21504      0
+.bss.r_words.11       43136      0
+.bss.r_buf.12         43136      0
+.bss.W.13               128      0
+.bss.M.14               128      0
+.bss.S.15             21504      0
+.bss.ST.16            21504      0
+.bss.C.17               128      0
+.bss.Bp.18            21504      0
+.bss.ss_in.19         21728      0
+.bss.B.20             21504      0
+.bss.packed_Bp.21     21504      0
+.bss.Bp.22            21504      0
+.bss.Ep.23            21504      0
+.bss.Sp.24            21504      0
+.bss.r_words.25       43136      0
+.bss.r_buf.26         43136      0
+.bss.packed_ST.27     21504      0
+.bss.packed_B.28      21504      0
+.bss.B.29             21504      0
+.bss.S.30             21504      0
+.bss.E.31             21504      0
+.bss.ST.32            21504      0
+.bss.r_words.33       43008      0
+.bss.r_buf.34         43009      0
+.comment                 70      0
+.ARM.attributes          52      0
+Total                713763
+
+
+
+--- matrix.o (Matrix arithmetic) ---
+tm4c123g/build/matrix.o  :
+section                          size   addr
+.text                               0      0
+.data                               0      0
+.bss                                0      0
+.text.frodo_add                    36      0
+.text.frodo_sub                    40      0
+.text.frodo_compute_b             120      0
+.text.frodo_compute_out           180      0
+.text.frodo_mul_add_spa_plus_e    108      0
+.comment                           70      0
+.ARM.attributes                    52      0
+Total                             606
+
+
+
+--- sample.o (CDF error sampling) ---
+tm4c123g/build/sample.o  :
+section                     size   addr
+.text                          0      0
+.data                          0      0
+.bss                           0      0
+.text.frodo_sample_matrix     80      0
+.rodata.FRODO1344_T_X         14      0
+.comment                      70      0
+.ARM.attributes               52      0
+Total                        216
+
+
+
+--- encode.o (Encode/Decode) ---
+tm4c123g/build/encode.o  :
+section              size   addr
+.text                   0      0
+.data                   0      0
+.bss                    0      0
+.text.frodo_encode     40      0
+.text.frodo_decode     56      0
+.comment               70      0
+.ARM.attributes        52      0
+Total                 218
+
+
+
+--- pack.o (Pack/Unpack) ---
+tm4c123g/build/pack.o  :
+section              size   addr
+.text                   0      0
+.data                   0      0
+.bss                    0      0
+.text.frodo_pack       32      0
+.text.frodo_unpack     32      0
+.comment               70      0
+.ARM.attributes        52      0
+Total                 186
+
+
+
+--- gen_A.o (Public matrix A generation) ---
+tm4c123g/build/gen_A.o  :
+section                 size   addr
+.text                      0      0
+.data                      0      0
+.bss                       0      0
+.text.frodo_gen_A_row    104      0
+.text.frodo_gen_A         32      0
+.comment                  70      0
+.ARM.attributes           52      0
+Total                    258
+
+
+
+--- util.o (ct_verify/ct_select/SHAKE256) ---
+tm4c123g/build/util.o  :
+section                      size   addr
+.text                           0      0
+.data                           0      0
+.bss                            0      0
+.text.frodo_ct_verify          44      0
+.text.frodo_ct_select          60      0
+.text.frodo_pack_le16          32      0
+.text.frodo_unpack_le16        32      0
+.rodata.randombytes.str1.4     17      0
+.text.randombytes              56      0
+.comment                       70      0
+.ARM.attributes                52      0
+Total                         363
+
+
+
+--- aes.o (tiny-AES (HAL dependency)) ---
+tm4c123g/build/aes.o  :
+section                        size   addr
+.text                             0      0
+.data                             0      0
+.bss                              0      0
+.text.KeyExpansion              148      0
+.text.InvCipher                 672      0
+.text.Cipher                    440      0
+.text.AES_init_ctx                4      0
+.text.AES_init_ctx_iv            48      0
+.text.AES_ctx_set_iv             28      0
+.text.AES_ECB_encrypt            12      0
+.text.AES_ECB_decrypt            12      0
+.text.AES_CBC_encrypt_buffer    112      0
+.text.AES_CBC_decrypt_buffer    124      0
+.text.AES_CTR_xcrypt_buffer     144      0
+.rodata.Rcon                     11      0
+.rodata.rsbox                   256      0
+.rodata.sbox                    256      0
+.comment                         70      0
+.ARM.attributes                  52      0
+Total                          2389
+
+
+
+--- fips202.o (fips202 SHAKE256 (HAL dependency)) ---
+tm4c123g/build/fips202.o  :
+section                          size   addr
+.text                               0      0
+.data                               0      0
+.bss                                0      0
+.text.KeccakF1600_StatePermute   3812      0
+.text.keccak_absorb               288      0
+.text.keccak_inc_absorb           288      0
+.text.keccak_inc_finalize          96      0
+.text.keccak_inc_squeeze          268      0
+.text.shake128_inc_init            40      0
+.text.shake128_inc_absorb          12      0
+.text.shake128_inc_finalize        92      0
+.text.shake128_inc_squeeze          8      0
+.text.shake128_inc_ctx_clone       40      0
+.text.shake128_inc_ctx_release      8      0
+.text.shake256_inc_init            40      0
+.text.shake256_inc_absorb          12      0
+.text.shake256_inc_finalize        92      0
+.text.shake256_inc_squeeze          8      0
+.text.shake256_inc_ctx_clone       40      0
+.text.shake256_inc_ctx_release      8      0
+.text.shake128_absorb              44      0
+.text.shake128_squeezeblocks       96      0
+.text.shake128_ctx_clone           40      0
+.text.shake128_ctx_release          8      0
+.text.shake256_absorb              44      0
+.text.shake256_squeezeblocks       96      0
+.text.shake256_ctx_clone           40      0
+.text.shake256_ctx_release          8      0
+.text.shake128                    316      0
+.text.shake256                    316      0
+.text.sha3_256_inc_init            40      0
+.text.sha3_256_inc_ctx_clone       40      0
+.text.sha3_256_inc_ctx_release      8      0
+.text.sha3_256_inc_absorb          12      0
+.text.sha3_256_inc_finalize       120      0
+.text.sha3_256                    124      0
+.text.sha3_384_inc_init            40      0
+.text.sha3_384_inc_ctx_clone       40      0
+.text.sha3_384_inc_absorb          12      0
+.text.sha3_384_inc_ctx_release      8      0
+.text.sha3_384_inc_finalize       140      0
+.text.sha3_384                    140      0
+.text.sha3_512_inc_init            40      0
+.text.sha3_512_inc_ctx_clone       40      0
+.text.sha3_512_inc_absorb          12      0
+.text.sha3_512_inc_ctx_release      8      0
+.text.sha3_512_inc_finalize       140      0
+.text.sha3_512                    136      0
+.rodata.KeccakF_RoundConstants    192      0
+.comment                           70      0
+.ARM.attributes                    52      0
+Total                            7574
+
+
+
+--- hal_aes.o (AES HAL) ---
+tm4c123g/build/hal_aes.o  :
+section                  size   addr
+.text                       0      0
+.data                       0      0
+.bss                        0      0
+.text.frodo_aes128_ecb     52      0
+.comment                   70      0
+.ARM.attributes            52      0
+Total                     174
+
+
+
+--- hal_shake.o (SHAKE HAL) ---
+tm4c123g/build/hal_shake.o  :
+section                size   addr
+.text                     0      0
+.data                     0      0
+.bss                      0      0
+.text.frodo_shake256      4      0
+.comment                 70      0
+.ARM.attributes          52      0
+Total                   126
+
+
+
+--- hal_rng.o (RNG HAL) ---
+tm4c123g/build/hal_rng.o  :
+section                      size   addr
+.text                           0      0
+.data                           0      0
+.bss                            0      0
+.rodata.randombytes.str1.4     33      0
+.text.randombytes              68      0
+.bss.counter.0                  4      0
+.comment                       70      0
+.ARM.attributes                52      0
+Total                         227
+
+
+
+--- main.o (Board init and KEM runner) ---
+tm4c123g/build/main.o  :
+section                                      size   addr
+.text                                           0      0
+.data                                           0      0
+.bss                                            0      0
+.text.uart_print                               32      0
+.rodata.uart_print_dec.str1.4                   2      0
+.text.uart_print_dec                           88      0
+.rodata.uart_print_cycles.str1.4               21      0
+.text.uart_print_cycles                       104      0
+.rodata.uart_print_hex.constprop.0.str1.4      17      0
+.text.uart_print_hex.constprop.0               84      0
+.rodata.main.str1.4                           711      0
+.text.startup.main                            856      0
+.bss.ss_dec                                    32      0
+.bss.ss_enc                                    32      0
+.bss.ct                                     21696      0
+.bss.sk                                     43088      0
+.bss.pk                                     21520      0
+.comment                                       70      0
+.ARM.attributes                                52      0
+Total                                       88405
+
+
+
+--- startup_gcc.o (Reset handler and vector table) ---
+tm4c123g/build/startup_gcc.o  :
+section                 size   addr
+.text                      0      0
+.data                      0      0
+.bss                       0      0
+.text.Default_Handler      4      0
+.text.Reset_Handler       80      0
+.isr_vector               64      0
+.comment                  70      0
+.ARM.attributes           52      0
+Total                    270
+
+
+
+=============================================
+
+--- Summary ---
+
+Section                             Bytes        KiB          %
+-------                             -----        ---          -
+.text (flash / code)                13484      13.1K
+.bss  (SRAM / static)              797989     779.2K
+.data (SRAM / init)                     0         0K
+
+--- Platform viability ---
+
+Board                   Flash     SRAM .text fit?  .bss fit?
+-----                   -----     ---- ---------- ----------
+TM4C123GH6PM             256K      32K YES (5.1%) NO (+765221B)
+TM4C1294NCPDT              1M     256K YES (1.2%)         NO
+
+=============================================

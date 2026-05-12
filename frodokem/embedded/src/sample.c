@@ -23,8 +23,6 @@
 /* CDF table (T_x) for FrodoKEM-1344 */
 const uint16_t FRODO1344_T_X[7] = {9142, 23462, 30338, 32361, 32725, 32765, 32767};
 
-#define T_X_TABLE_LEN 7
-
 /**
  * @brief Sample one error value from the discrete Gaussian distribution.
  *  

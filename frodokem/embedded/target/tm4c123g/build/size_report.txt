@@ -1,5 +1,5 @@
 FrodoKEM-1344-AES ARM Cortex-M4F Size Report
-Generated: Sun May 10 01:22:31 EDT 2026
+Generated: Mon May 11 22:12:07 EDT 2026
 Compiler:  GNU size (Arm GNU Toolchain 15.2.Rel1 (Build arm-15.86)) 2.45.1.20251203
 Target:    TM4C123GH6PM (Cortex-M4F)
 Flags:     -mcpu=cortex-m4 -mthumb -O2
@@ -14,41 +14,13 @@ section                size   addr
 .text                     0      0
 .data                     0      0
 .bss                      0      0
-.text.frodo_keygen      532      0
-.text.frodo_encaps      664      0
-.text.frodo_decaps      836      0
-.bss.ss_in.0          21728      0
-.bss.packed_Cp.1        128      0
-.bss.packed_Bpp.2     21504      0
-.bss.Cp.3               128      0
-.bss.encoded_u.4        128      0
-.bss.V.5                128      0
-.bss.B.6              21504      0
-.bss.Bpp.7            21504      0
-.bss.Epp.8              128      0
-.bss.Ep.9             21504      0
-.bss.Sp.10            21504      0
-.bss.r_words.11       43136      0
-.bss.r_buf.12         43136      0
-.bss.W.13               128      0
-.bss.M.14               128      0
-.bss.S.15             21504      0
-.bss.ST.16            21504      0
-.bss.C.17               128      0
-.bss.Bp.18            21504      0
-.bss.ss_in.19         21728      0
-.bss.B.20             21504      0
-.bss.packed_Bp.21     21504      0
-.bss.Bp.22            21504      0
-.bss.Ep.23            21504      0
-.bss.Sp.24            21504      0
-.bss.r_words.25       43136      0
-.bss.r_buf.26         43136      0
-.bss.r_words.27       43008      0
-.bss.r_buf.28         43009      0
+.text.frodo_keygen      544      0
+.text.frodo_encaps      720      0
+.text.frodo_decaps      848      0
+.bss.ws              281056      0
 .comment                 70      0
 .ARM.attributes          52      0
-Total                584747
+Total                283290
 
 
 
@@ -268,27 +240,22 @@ Total                         227
 
 --- main.o (Board init and KEM runner) ---
 tm4c123g/build/main.o  :
-section                                      size   addr
-.text                                           0      0
-.data                                           0      0
-.bss                                            0      0
-.text.uart_print                               32      0
-.rodata.uart_print_dec.str1.4                   2      0
-.text.uart_print_dec                           88      0
-.rodata.uart_print_cycles.str1.4               21      0
-.text.uart_print_cycles                       104      0
-.rodata.uart_print_hex.constprop.0.str1.4      17      0
-.text.uart_print_hex.constprop.0               84      0
-.rodata.main.str1.4                           711      0
-.text.startup.main                            856      0
-.bss.ss_dec                                    32      0
-.bss.ss_enc                                    32      0
-.bss.ct                                     21696      0
-.bss.sk                                     43088      0
-.bss.pk                                     21520      0
-.comment                                       70      0
-.ARM.attributes                                52      0
-Total                                       88405
+section                                     size   addr
+.text                                          0      0
+.data                                          0      0
+.bss                                           0      0
+.text.uart_print                              32      0
+.rodata.uart_print_dec.str1.4                  2      0
+.text.uart_print_dec                          88      0
+.rodata.uart_print_cycles.str1.4              21      0
+.text.uart_print_cycles                      104      0
+.rodata.uart_print_hex.constprop.0.str1.4     17      0
+.text.uart_print_hex.constprop.0              84      0
+.rodata.main.str1.4                          711      0
+.text.startup.main                           860      0
+.comment                                      70      0
+.ARM.attributes                               52      0
+Total                                       2041
 
 
 
@@ -333,15 +300,15 @@ Total              170
 
 Section                             Bytes        KiB          %
 -------                             -----        ---          -
-.text (flash / code)                13484      13.1K
-.bss  (SRAM / static)              668965     653.2K
+.text (flash / code)                13568      13.2K
+.bss  (SRAM / static)              281060     274.4K
 .data (SRAM / init)                     0         0K
 
 --- Platform viability ---
 
 Board                   Flash     SRAM .text fit?  .bss fit?
 -----                   -----     ---- ---------- ----------
-TM4C123GH6PM             256K      32K YES (5.1%) NO (+636197B)
+TM4C123GH6PM             256K      32K YES (5.1%) NO (+248292B)
 TM4C1294NCPDT              1M     256K YES (1.2%)         NO
 
 =============================================

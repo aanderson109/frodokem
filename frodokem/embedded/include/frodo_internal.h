@@ -159,6 +159,12 @@
 /**
  * @def FRODO_PACKED_B_BYTES
  * @brief Byte length of packed matrix B
+ * 
+ * Output of KeyGen Step 8, where matrix B is input to Frodo.Pack
+ * Output of Frodo.Pack is a byte array of length D*n1*n2, where
+ * n1 and n2 are derived from the input matrix; in this case,
+ * the input matrix B is an n x nbar matrix.
+ * 
  * @par Derivation: n * nbar * 2 = 1344 * 8 * 2 = 21,504 bytes
  */
 #define FRODO_PACKED_B_BYTES (FRODO_N * FRODO_NBAR * 2)
@@ -166,6 +172,9 @@
 /**
  * @def FRODO_PACKED_C_BYTES
  * @brief Byte length of packed matrix C
+ * 
+ * Output of Encaps Step 14, where matrix C is input to Frodo.Pack.
+ * 
  * @par Derivation: nbar * nbar * 2 = 8 * 8 * 2 = 128 bytes
  */
 #define FRODO_PACKED_C_BYTES (FRODO_NBAR * FRODO_NBAR * 2)
@@ -437,6 +446,60 @@ typedef struct {
 
 /** @} */ // end frodo1344_matrix_types
 
+//////////////////////////////////
+//           WORKSPACE          //
+//////////////////////////////////
+typedef union {
+    struct {
+        uint8_t r_buf[FRODO_NBAR * FRODO_N * 2];
+        uint8_t packed_B[FRODO_PACKED_B_BYTES];
+        uint8_t packed_ST[FRODO_PACKED_B_BYTES];
+        uint16_t r_words[2 * FRODO_N * FRODO_NBAR];
+        uint16_t ST[FRODO_NBAR * FRODO_N];
+        uint16_t S[FRODO_N * FRODO_NBAR];
+        uint16_t E[FRODO_N * FRODO_NBAR];
+        uint16_t B[FRODO_N * FRODO_NBAR];
+    } keygen;
+
+    struct {
+        uint8_t r_buf[(2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR) * 2];
+        uint8_t ss_in[FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES + FRODO_SEC_BYTES];
+        uint8_t packed_Bp[FRODO_PACKED_B_BYTES];
+        uint8_t packed_C[FRODO_PACKED_C_BYTES];
+        uint16_t r_words[FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR];
+        uint16_t encoded_u[FRODO_NBAR * FRODO_NBAR];
+        uint16_t B[FRODO_NBAR * FRODO_N];
+        uint16_t C[FRODO_NBAR * FRODO_NBAR];
+        uint16_t Sp[FRODO_NBAR * FRODO_N];
+        uint16_t Ep[FRODO_NBAR * FRODO_N];
+        uint16_t Epp[FRODO_NBAR * FRODO_NBAR];
+        uint16_t Bp[FRODO_NBAR * FRODO_N];
+        uint16_t V[FRODO_NBAR * FRODO_NBAR];
+    } encaps;
+
+    struct {
+        uint16_t Bp[FRODO_NBAR * FRODO_N];
+        uint16_t ST[FRODO_NBAR * FRODO_N];
+        uint16_t Sp[FRODO_NBAR * FRODO_N];
+        uint16_t Ep[FRODO_NBAR * FRODO_N];
+        uint16_t Bpp[FRODO_NBAR * FRODO_N];
+        uint16_t C[FRODO_NBAR * FRODO_NBAR];
+        uint16_t M[FRODO_NBAR * FRODO_NBAR];
+        uint16_t W[FRODO_NBAR * FRODO_NBAR];
+        uint16_t Epp[FRODO_NBAR * FRODO_NBAR];
+        uint16_t V[FRODO_NBAR * FRODO_NBAR];
+        uint16_t Cp[FRODO_NBAR * FRODO_NBAR];
+        uint16_t S[FRODO_N * FRODO_NBAR];
+        uint16_t B[FRODO_N * FRODO_NBAR];
+        uint16_t encoded_u[FRODO_NBAR * FRODO_NBAR];
+        uint8_t r_buf[(2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR) * 2];
+        uint16_t r_words[2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR];
+        uint8_t packed_Bpp[FRODO_PACKED_B_BYTES];
+        uint8_t packed_Cp[FRODO_PACKED_C_BYTES];
+        uint8_t ss_in[FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES + FRODO_SEC_BYTES];
+    } decaps;
+
+} frodo_workspace_t;
 
 /**
  * matrix.c Function Prototypes

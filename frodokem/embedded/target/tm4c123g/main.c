@@ -50,12 +50,6 @@
 #define SYSCLK_HZ 80000000UL
 #define BAUD_RATE 115200UL
 
-/* KEM Buffers */
-static uint8_t pk[FRODO_PUBLICKEYBYTES];
-static uint8_t sk[FRODO_SECRETKEYBYTES];
-static uint8_t ct[FRODO_CIPHERTEXTBYTES];
-static uint8_t ss_enc[FRODO_BYTES];
-static uint8_t ss_dec[FRODO_BYTES];
 
 /* Function Prototypes */
 static void clock_init(void);
@@ -96,6 +90,14 @@ static uint32_t systick_elapsed(uint32_t start, uint32_t end) {
  * 
  */
 int main(void) {
+
+    /* KEM Buffers */
+    uint8_t pk[FRODO_PUBLICKEYBYTES];
+    uint8_t sk[FRODO_SECRETKEYBYTES];
+    uint8_t ct[FRODO_CIPHERTEXTBYTES];
+    uint8_t ss_enc[FRODO_BYTES];
+    uint8_t ss_dec[FRODO_BYTES];
+
     uint32_t t0, t1;
     uint32_t cycles_keygen, cycles_encaps, cycles_decaps;
     bool ss_match;

@@ -287,14 +287,29 @@ int frodo_encaps(uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
     memcpy(ct + FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES, salt, FRODO_SALT_BYTES);
 
     /* Arrange: ss_in <- packed_Bp || packed_C || salt || k */
-    memcpy(ss_in, packed_Bp, FRODO_PACKED_B_BYTES);
-    memcpy(ss_in + FRODO_PACKED_B_BYTES, packed_C, FRODO_PACKED_C_BYTES);
-    memcpy(ss_in + FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES, salt, FRODO_SALT_BYTES);
-    memcpy(ss_in + FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES, k,
-           FRODO_SEC_BYTES);
+    //memcpy(ss_in, packed_Bp, FRODO_PACKED_B_BYTES);
+    //memcpy(ss_in + FRODO_PACKED_B_BYTES, packed_C, FRODO_PACKED_C_BYTES);
+    //memcpy(ss_in + FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES, salt, FRODO_SALT_BYTES);
+    //memcpy(ss_in + FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES, k,
+    //       FRODO_SEC_BYTES);
 
     /* Compute: ss <- SHAKE256(ss_in)*/
-    frodo_shake256(ss, FRODO_SS_BYTES, ss_in, FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES + FRODO_SEC_BYTES);
+    //frodo_shake256(ss, FRODO_SS_BYTES, ss_in, sizeof(ss_in));
+
+    /* Compute ss <- SHAKE256(packed_B || packed_C || salt || k) */
+    uint64_t ctx_buf[26];
+    shake256incctx ctx;
+    ctx.ctx = ctx_buf;
+    shake256_inc_init(&ctx);
+    shake256_inc_absorb(&ctx, packed_Bp, FRODO_PACKED_B_BYTES);
+    shake256_inc_absorb(&ctx, packed_C, FRODO_PACKED_C_BYTES);
+    shake256_inc_absorb(&ctx, salt, FRODO_SALT_BYTES);
+    shake256_inc_absorb(&ctx, k, FRODO_SEC_BYTES);
+    shake256_inc_finalize(&ctx);
+    shake256_inc_squeeze(ss, FRODO_SS_BYTES, &ctx);
+
+
+
 
     /* Zeroize sensitive intermediates */
     memset(u, 0, sizeof(u));

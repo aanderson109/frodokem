@@ -1,9 +1,9 @@
 /**
  * @file gen_A.c
- * @author Alex Anderson (aandrs@vt.edu)
+ * @author Alex Anderson & Aemiliana Cruz
  * @brief FrodoKEM-1344-AES Public Matrix Generation
  * @version 0.1
- * @date 2026-04-12
+ * @date 2026-05-11
  *
  * Implements Frodo.Gen for FrodoKEM-1344-AES using AES128 as a
  * pseudorandom random function.
@@ -38,10 +38,9 @@
  * @param[in]  j     Stripe column index (0 to n-1 in steps of 8)
  */
 static void build_aes_input(uint8_t *block, uint16_t i, uint16_t j) {
-    memset(block, 0, 16);
-    block[0] = (uint8_t)(i & 0xFF);
+    block[0] = (uint8_t)i;
     block[1] = (uint8_t)(i >> 8);
-    block[2] = (uint8_t)(j & 0xFF);
+    block[2] = (uint8_t)j;
     block[3] = (uint8_t)(j >> 8);
 }
 
@@ -58,15 +57,22 @@ static void build_aes_input(uint8_t *block, uint16_t i, uint16_t j) {
  * @param[in]  i    Row index (0 to n-1)
  */
 void frodo_gen_A_row(uint16_t *row, const uint8_t *seed, uint16_t i) {
-    uint8_t block_in[16];
+    uint8_t block_in[16] = {0};
     uint8_t block_out[16];
-    uint16_t j;
-    size_t k;
 
-    for (j = 0; j < FRODO_N; j += FRODO_STRIPE_STEP) {
-        build_aes_input(block_in, i, j);
+    // set row index once
+    block_in[0] = (uint8_t)i;
+    block_in[1] = (uint8_t)(i >> 8);
+
+    for (uint16_t j = 0; j < FRODO_N; j += FRODO_STRIPE_STEP) {
+
+        // Only update the column index
+        block_in[2] = (uint8_t)j;
+        block_in[3] = (uint8_t)(j >> 8);
+
         frodo_aes128_ecb(seed, block_in, block_out);
-        for (k = 0; k < FRODO_STRIPE_STEP; k++) {
+
+        for (size_t k = 0; k < FRODO_STRIPE_STEP; k++) {
             row[j + k] = (uint16_t)block_out[2 * k] | ((uint16_t)block_out[2 * k + 1] << 8);
         }
     }
@@ -85,8 +91,7 @@ void frodo_gen_A_row(uint16_t *row, const uint8_t *seed, uint16_t i) {
  *          full 3.6MB matrix.
  */
 void frodo_gen_A(uint16_t *out, const uint8_t *seed) {
-    uint16_t i;
-    for (i = 0; i < FRODO_N; i++) {
+    for (uint16_t i = 0; i < FRODO_N; i++) {
         frodo_gen_A_row(&out[(size_t)i * FRODO_N], seed, i);
     }
 }

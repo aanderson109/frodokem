@@ -1,9 +1,9 @@
 /**
  * @file encode.c
- * @author Alex Anderson (aandrs@vt.edu)
+ * @author Alex Anderson & Aemiliana Cruz
  * @brief FrodoKEM-1344-AES Message Encoding & Decoding
  * @version 0.1
- * @date 2026-04-12
+ * @date 2026-05-11
  * 
  * Implements Frodo.Encode and Frodo.Decode for FrodoKEM-1344-AES.
  * 
@@ -36,13 +36,12 @@
  * @param[in]  in  Input message
  */
 void frodo_encode(uint16_t *out, const uint8_t *in) {
-    size_t i;
-    uint8_t byte;
+    const unsigned shift = FRODO_D - FRODO_B;
 
-    for (i = 0; i < FRODO_L_BYTES; i++) {
-        byte           = in[i];
-        out[2 * i]     = (uint16_t)(byte & 0x0F) << (FRODO_D - FRODO_B);
-        out[2 * i + 1] = (uint16_t)(byte >> 4) << (FRODO_D - FRODO_B);
+    for (size_t i = 0; i < FRODO_L_BYTES; i++) {
+        uint8_t byte   = in[i];
+        out[2 * i]     = (uint16_t)(byte & 0x0F) << shift;
+        out[2 * i + 1] = (uint16_t)(byte >> 4) << shift;
     }
 }
 
@@ -58,14 +57,12 @@ void frodo_encode(uint16_t *out, const uint8_t *in) {
  * @param[in]  in  Input matrix
  */
 void frodo_decode(uint8_t *out, const uint16_t *in) {
-    size_t i;
-    uint16_t lo, hi;
-    uint16_t round_add;
+    const unsigned shift = FRODO_D - FRODO_B;
+    uint16_t round_add   = (uint16_t)(1 << (shift - 1));
 
-    round_add = (uint16_t)(1 << (FRODO_D - FRODO_B - 1));
-    for (i = 0; i < FRODO_L_BYTES; i++) {
-        lo     = (in[2 * i] + round_add) >> (FRODO_D - FRODO_B);
-        hi     = (in[2 * i + 1] + round_add) >> (FRODO_D - FRODO_B);
-        out[i] = (uint8_t)((lo & 0x0F) | ((hi & 0x0F) << 4));
+    for (size_t i = 0; i < FRODO_L_BYTES; i++) {
+        uint16_t lo = (in[2 * i] + round_add) >> shift;
+        uint16_t hi = (in[2 * i + 1] + round_add) >> shift;
+        out[i]      = (uint8_t)((lo & 0x0F) | ((hi & 0x0F) << 4));
     }
 }

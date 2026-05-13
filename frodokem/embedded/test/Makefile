@@ -74,8 +74,8 @@ COMMON_OBJS = \
 	$(BUILD_DIR)/matrix.o			\
 	$(BUILD_DIR)/gen_A.o			\
 	$(BUILD_DIR)/kem.o				\
-	$(BUILD_DIR)/hal_aes_soft.o 	\
-	$(BUILD_DIR)/hal_shake_soft.o 	\
+	$(BUILD_DIR)/hal_aes.o			\
+	$(BUILD_DIR)/hal_shake.o 		\
 	$(BUILD_DIR)/aes.o 				\
 	$(BUILD_DIR)/fips202.o
 
@@ -87,6 +87,7 @@ COMMON_OBJS = \
 $(BUILD_DIR)/unit_tests: \
 		$(BUILD_DIR)/unit_tests.o \
 		$(BUILD_DIR)/util.o		\
+		$(BUILD_DIR)/hal_rng.o \
 		$(COMMON_OBJS)			\
 		| $(BUILD_DIR)
 	$(CC) $(CFLAGS) -o $@ $^
@@ -141,20 +142,24 @@ $(BUILD_DIR)/util_kat.o: $(SRC_DIR)/util.c | $(BUILD_DIR)
 # COMPILE RULES (HARDWARE ABSTRACTION LAYER)
 # -------------------------------------------
 
-# hal_aes_soft.o
-$(BUILD_DIR)/hal_aes_soft.o: hal_aes_soft.c | $(BUILD_DIR)
+# hal_aes.o
+$(BUILD_DIR)/hal_aes.o: ../hal/host/hal_aes.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-# hal_shake_soft.o
-$(BUILD_DIR)/hal_shake_soft.o: hal_shake_soft.c | $(BUILD_DIR)
+# hal_shake.o
+$(BUILD_DIR)/hal_shake.o: ../hal/host/hal_shake.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+# hal_rng.o
+$(BUILD_DIR)/hal_rng.o: ../hal/host/hal_rng.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 # aes.o
-$(BUILD_DIR)/aes.o: aes.c | $(BUILD_DIR)
+$(BUILD_DIR)/aes.o: ../hal/common/aes.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 # fips202.o
-$(BUILD_DIR)/fips202.o: fips202.c | $(BUILD_DIR)
+$(BUILD_DIR)/fips202.o: ../hal/common/fips202.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 # rng_drbg.o -> NIST AES-256 CTR DRBG via OpenSSL

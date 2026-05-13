@@ -1,9 +1,9 @@
 /**
  * @file util.c
- * @author Alex Anderson (aandrs@vt.edu)
+ * @author Alex Anderson & Aemiliana Cruz
  * @brief FrodoKEM-1344-AES Utility Functions
  * @version 0.1
- * @date 2026-04-12
+ * @date 2026-05-11
  *
  * Implements constant-time comparison and selection, little-endian
  * 16-bit packing helpers, and platform-specific random byte generation.
@@ -39,8 +39,7 @@
  */
 int frodo_ct_verify(const uint8_t *a, const uint8_t *b, size_t len) {
     uint8_t diff = 0;
-    size_t i;
-    for (i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++) {
         diff |= a[i] ^ b[i];
     }
     return (int)diff;
@@ -63,10 +62,8 @@ int frodo_ct_verify(const uint8_t *a, const uint8_t *b, size_t len) {
  *          information
  */
 void frodo_ct_select(uint8_t *out, const uint8_t *a, const uint8_t *b, size_t len, int selector) {
-    uint8_t norm = (uint8_t)(((unsigned int)!!selector) & 0xFF);
-    uint8_t mask = (uint8_t)(0u - (unsigned int)norm);
-    size_t i;
-    for (i = 0; i < len; i++) {
+    uint8_t mask = (uint8_t)(-!!selector);
+    for (size_t i = 0; i < len; i++) {
         out[i] = (a[i] & mask) | (b[i] & ~mask);
     }
 }
@@ -88,10 +85,10 @@ void frodo_ct_select(uint8_t *out, const uint8_t *a, const uint8_t *b, size_t le
  *       from this complex byte ordering schema.
  */
 void frodo_pack_le16(uint8_t *out, const uint16_t *in, size_t n) {
-    size_t i;
-    for (i = 0; i < n; i++) {
-        out[2 * i]     = (uint8_t)(in[i] & 0xFF);
-        out[2 * i + 1] = (uint8_t)(in[i] >> 8);
+    for (size_t i = 0; i < n; i++) {
+        uint16_t v     = in[i];
+        out[2 * i]     = (uint8_t)v;
+        out[2 * i + 1] = (uint8_t)(v >> 8);
     }
 }
 
@@ -106,8 +103,7 @@ void frodo_pack_le16(uint8_t *out, const uint16_t *in, size_t n) {
  * @param[in]   n Number of coefficients
  */
 void frodo_unpack_le16(uint16_t *out, const uint8_t *in, size_t n) {
-    size_t i;
-    for (i = 0; i < n; i++) {
+    for (size_t i = 0; i < n; i++) {
         out[i] = (uint16_t)in[2 * i] | ((uint16_t)in[2 * i + 1] << 8);
     }
 }

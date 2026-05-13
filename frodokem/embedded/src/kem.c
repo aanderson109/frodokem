@@ -226,7 +226,7 @@ int frodo_encaps(uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
     uint8_t *packed_Bp = ws.encaps.packed_Bp;
 
     //static uint8_t ss_in[FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES + FRODO_SEC_BYTES];
-    uint8_t *ss_in = ws.encaps.ss_in;
+    //uint8_t *ss_in = ws.encaps.ss_in;
 
     /* Sample: u || salt */
     randombytes(randomness, sizeof(randomness));
@@ -394,7 +394,7 @@ int frodo_decaps(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
     uint8_t *r_buf = ws.decaps.r_buf;
     uint8_t *packed_Bpp = ws.decaps.packed_Bpp;
     uint8_t *packed_Cp = ws.decaps.packed_Cp;
-    uint8_t *ss_in = ws.decaps.ss_in;
+    //uint8_t *ss_in = ws.decaps.ss_in;
 
     //static uint16_t encoded_u[FRODO_NBAR * FRODO_NBAR];
     //static uint8_t r_buf[(2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR) * 2];
@@ -492,17 +492,29 @@ int frodo_decaps(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
     frodo_ct_select(k_bar, s, k_prime, FRODO_SEC_BYTES, ct_match);
 
     /* Arrange: ss_in <- packed_Bp || packed_C || salt || k_bar */
-    memcpy(ss_in, packed_Bp, FRODO_PACKED_B_BYTES);
-    memcpy(ss_in + FRODO_PACKED_B_BYTES, packed_C, FRODO_PACKED_C_BYTES);
-    memcpy(ss_in + FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES, salt, FRODO_SALT_BYTES);
-    memcpy(ss_in + FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES, k_bar,
-           FRODO_SEC_BYTES);
+    //memcpy(ss_in, packed_Bp, FRODO_PACKED_B_BYTES);
+    //memcpy(ss_in + FRODO_PACKED_B_BYTES, packed_C, FRODO_PACKED_C_BYTES);
+    //memcpy(ss_in + FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES, salt, FRODO_SALT_BYTES);
+    //memcpy(ss_in + FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES, k_bar,
+    //       FRODO_SEC_BYTES);
 
     /* 
      * Compute: ss <- SHAKE256(ss_in) 
      * Produces real shared secret if ct_match == 0
      */
-    frodo_shake256(ss, FRODO_SS_BYTES, ss_in, FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES + FRODO_SEC_BYTES);
+    //frodo_shake256(ss, FRODO_SS_BYTES, ss_in, FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES + FRODO_SEC_BYTES);
+
+    /* Compute ss <- SHAKE256(packed_B || packed_C || salt || k) */
+    uint64_t ctx_buf[26];
+    shake256incctx ctx;
+    ctx.ctx = ctx_buf;
+    shake256_inc_init(&ctx);
+    shake256_inc_absorb(&ctx, packed_Bp, FRODO_PACKED_B_BYTES);
+    shake256_inc_absorb(&ctx, packed_C, FRODO_PACKED_C_BYTES);
+    shake256_inc_absorb(&ctx, salt, FRODO_SALT_BYTES);
+    shake256_inc_absorb(&ctx, k_bar, FRODO_SEC_BYTES);
+    shake256_inc_finalize(&ctx);
+    shake256_inc_squeeze(ss, FRODO_SS_BYTES, &ctx);
 
     /* Zeroize sensitive intermediate values */
     memset(ST, 0, FRODO_NBAR * FRODO_N * sizeof(uint16_t));

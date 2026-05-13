@@ -463,7 +463,7 @@ typedef union {
 
     struct {
         uint8_t r_buf[(2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR) * 2];
-        uint8_t ss_in[FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES + FRODO_SEC_BYTES];
+        //uint8_t ss_in[FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES + FRODO_SEC_BYTES];
         uint8_t packed_Bp[FRODO_PACKED_B_BYTES];
         uint8_t packed_C[FRODO_PACKED_C_BYTES];
         uint16_t r_words[FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR];
@@ -496,7 +496,7 @@ typedef union {
         uint16_t r_words[2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR];
         uint8_t packed_Bpp[FRODO_PACKED_B_BYTES];
         uint8_t packed_Cp[FRODO_PACKED_C_BYTES];
-        uint8_t ss_in[FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES + FRODO_SEC_BYTES];
+        //uint8_t ss_in[FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES + FRODO_SEC_BYTES];
     } decaps;
 
 } frodo_workspace_t;

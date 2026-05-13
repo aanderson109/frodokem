@@ -1,5 +1,5 @@
 FrodoKEM-1344-AES ARM Cortex-M4F Size Report
-Generated: Mon May 11 22:12:07 EDT 2026
+Generated: Wed May 13 02:35:38 EDT 2026
 Compiler:  GNU size (Arm GNU Toolchain 15.2.Rel1 (Build arm-15.86)) 2.45.1.20251203
 Target:    TM4C123GH6PM (Cortex-M4F)
 Flags:     -mcpu=cortex-m4 -mthumb -O2
@@ -14,13 +14,13 @@ section                size   addr
 .text                     0      0
 .data                     0      0
 .bss                      0      0
-.text.frodo_keygen      544      0
-.text.frodo_encaps      720      0
-.text.frodo_decaps      848      0
-.bss.ws              281056      0
+.text.frodo_keygen      548      0
+.text.frodo_encaps      696      0
+.text.frodo_decaps      824      0
+.bss.ws              259328      0
 .comment                 70      0
 .ARM.attributes          52      0
-Total                283290
+Total                261518
 
 
 
@@ -300,15 +300,15 @@ Total              170
 
 Section                             Bytes        KiB          %
 -------                             -----        ---          -
-.text (flash / code)                13568      13.2K
-.bss  (SRAM / static)              281060     274.4K
+.text (flash / code)                13524      13.2K
+.bss  (SRAM / static)              259332     253.2K
 .data (SRAM / init)                     0         0K
 
 --- Platform viability ---
 
 Board                   Flash     SRAM .text fit?  .bss fit?
 -----                   -----     ---- ---------- ----------
-TM4C123GH6PM             256K      32K YES (5.1%) NO (+248292B)
-TM4C1294NCPDT              1M     256K YES (1.2%)         NO
+TM4C123GH6PM             256K      32K YES (5.1%) NO (+226564B)
+TM4C1294NCPDT              1M     256K YES (1.2%) YES (98.9%)
 
 =============================================

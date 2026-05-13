@@ -36,6 +36,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "../hal/common/fips202.h"
 
 /* AES-128 ECB */
 void frodo_aes128_ecb(const uint8_t *key, const uint8_t *in, uint8_t *out);

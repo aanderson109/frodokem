@@ -451,22 +451,17 @@ typedef struct {
 //////////////////////////////////
 typedef union {
     struct {
-        uint8_t r_buf[2 * FRODO_NBAR * FRODO_N * 2];
-        //uint8_t packed_B[FRODO_PACKED_B_BYTES];
+        //uint8_t r_buf[2 * FRODO_NBAR * FRODO_N * 2];
         uint8_t packed_ST[FRODO_PACKED_B_BYTES];
-        uint16_t r_words[2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR];
+        //uint16_t r_words[2 * FRODO_N * FRODO_NBAR];
         uint16_t ST[FRODO_NBAR * FRODO_N];
         uint16_t S[FRODO_N * FRODO_NBAR];
         uint16_t E[FRODO_N * FRODO_NBAR];
-        //uint16_t B[FRODO_N * FRODO_NBAR];
     } keygen;
 
     struct {
-        uint8_t r_buf[(2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR) * 2];
-        //uint8_t ss_in[FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES + FRODO_SEC_BYTES];
         uint8_t packed_Bp[FRODO_PACKED_B_BYTES];
         uint8_t packed_C[FRODO_PACKED_C_BYTES];
-        uint16_t r_words[2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR];
         uint16_t encoded_u[FRODO_NBAR * FRODO_NBAR];
         uint16_t B[FRODO_NBAR * FRODO_N];
         uint16_t C[FRODO_NBAR * FRODO_NBAR];
@@ -479,10 +474,9 @@ typedef union {
 
     struct {
         uint16_t Bp[FRODO_NBAR * FRODO_N];
-        uint16_t ST[FRODO_NBAR * FRODO_N];
+        //uint16_t ST[FRODO_NBAR * FRODO_N];
         uint16_t Sp[FRODO_NBAR * FRODO_N];
         uint16_t Ep[FRODO_NBAR * FRODO_N];
-        //uint16_t Bpp[FRODO_NBAR * FRODO_N];
         uint16_t C[FRODO_NBAR * FRODO_NBAR];
         uint16_t M[FRODO_NBAR * FRODO_NBAR];
         uint16_t W[FRODO_NBAR * FRODO_NBAR];
@@ -490,13 +484,9 @@ typedef union {
         uint16_t V[FRODO_NBAR * FRODO_NBAR];
         uint16_t Cp[FRODO_NBAR * FRODO_NBAR];
         uint16_t S[FRODO_N * FRODO_NBAR];
-        uint16_t B[FRODO_N * FRODO_NBAR];
+        //uint16_t B[FRODO_N * FRODO_NBAR];
         uint16_t encoded_u[FRODO_NBAR * FRODO_NBAR];
-        uint8_t r_buf[(2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR) * 2];
-        uint16_t r_words[2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR];
-        //uint8_t packed_Bpp[FRODO_PACKED_B_BYTES];
         uint8_t packed_Cp[FRODO_PACKED_C_BYTES];
-        //uint8_t ss_in[FRODO_PACKED_B_BYTES + FRODO_PACKED_C_BYTES + FRODO_SALT_BYTES + FRODO_SEC_BYTES];
     } decaps;
 
 } frodo_workspace_t;

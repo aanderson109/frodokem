@@ -52,8 +52,8 @@ static frodo_workspace_t ws;
  */
 int frodo_keygen(uint8_t *pk, uint8_t *sk) {
 
-    uint8_t *r_buf = ws.keygen.r_buf;
-    uint16_t *r_words = ws.keygen.r_words;
+    //uint8_t *r_buf = ws.keygen.r_buf;
+    //uint16_t *r_words = ws.keygen.r_words;
     uint16_t *ST = ws.keygen.ST;
     uint16_t *S = ws.keygen.S;
     uint16_t *E = ws.keygen.E;
@@ -81,6 +81,12 @@ int frodo_keygen(uint8_t *pk, uint8_t *sk) {
     uint8_t seed_se[FRODO_SE_BYTES];             /**< Seed for error sampling */
     uint8_t z[FRODO_SEED_A_BYTES];               /**< Seed for matrix A generation */
     size_t i, j;
+    uint8_t r_bytes[FRODO_N * 2];
+    uint8_t r_bytes_E[FRODO_NBAR * 2];
+    uint16_t r_row_E[FRODO_NBAR];
+    uint16_t r_row[FRODO_N];
+    uint8_t r_bytes_small[FRODO_NBAR * FRODO_NBAR * 2];
+    uint16_t r_small[FRODO_NBAR * FRODO_NBAR];
 
     /* Packed Byte Arrays */
     //uint8_t packed_B[FRODO_PACKED_B_BYTES];
@@ -99,16 +105,45 @@ int frodo_keygen(uint8_t *pk, uint8_t *sk) {
     /* Compute: r <- SHAKE256(0x5F || seed_SE) */
     domain_sep[0] = 0x5F;
     memcpy(domain_sep + 1, seed_se, FRODO_SE_BYTES);
-    frodo_shake256(r_buf, 2 * FRODO_N * FRODO_NBAR * sizeof(uint16_t), domain_sep, sizeof(domain_sep));
+    
+    
+    //frodo_shake256(r_buf, 2 * FRODO_N * FRODO_NBAR * sizeof(uint16_t), domain_sep, sizeof(domain_sep));
 
     /* Convert: r bytes -> little-endian uint16 words */
-    for (i = 0; i < 2 * FRODO_N * (size_t)FRODO_NBAR; i++) {
-        r_words[i] = (uint16_t)r_buf[2 * i] | ((uint16_t)r_buf[2 * i + 1] << 8);
-    }
+    //for (i = 0; i < 2 * FRODO_N * (size_t)FRODO_NBAR; i++) {
+    //    r_words[i] = (uint16_t)r_buf[2 * i] | ((uint16_t)r_buf[2 * i + 1] << 8);
+    //}
 
     /* Sample: error matrices S^T and E from CDF table */
-    frodo_sample_matrix(ST, r_words, FRODO_NBAR * FRODO_N);
-    frodo_sample_matrix(E, r_words + FRODO_NBAR * FRODO_N, FRODO_N * FRODO_NBAR);
+    //frodo_sample_matrix(ST, r_words, FRODO_NBAR * FRODO_N);
+    //frodo_sample_matrix(E, r_words + FRODO_NBAR * FRODO_N, FRODO_N * FRODO_NBAR);
+
+    // incremental shake replaces r_buf + r_words entirely
+    uint64_t se_ctx_buf[26];
+    shake256incctx se_ctx;
+    se_ctx.ctx = se_ctx_buf;
+    shake256_inc_init(&se_ctx);
+    shake256_inc_absorb(&se_ctx, domain_sep, sizeof(domain_sep));
+    shake256_inc_finalize(&se_ctx);
+
+    // Sample ST row by row
+    for (i = 0; i < FRODO_NBAR; i++) {
+        shake256_inc_squeeze(r_bytes, FRODO_N * 2, &se_ctx);
+        for (j = 0; j < FRODO_N; j++) {
+            r_row[j] = (uint16_t)r_bytes[2*j] | ((uint16_t)r_bytes[2*j+1] << 8);
+        }
+        frodo_sample_matrix(ST + i * FRODO_N, r_row, FRODO_N);
+    }
+
+    // sample E row by row
+    for (i = 0; i < FRODO_N; i++) {
+        shake256_inc_squeeze(r_bytes_E, FRODO_NBAR * 2, &se_ctx);
+        for (j = 0; j < FRODO_NBAR; j++) {
+            r_row_E[j] = (uint16_t)r_bytes_E[2*j] | ((uint16_t)r_bytes_E[2*j+1] << 8);
+        }
+        frodo_sample_matrix(E + i * FRODO_NBAR, r_row_E, FRODO_NBAR);
+    }
+
 
     /* Compute: S <- (S^T)^T */
     for (i = 0; i < FRODO_N; i++) {
@@ -162,7 +197,7 @@ int frodo_keygen(uint8_t *pk, uint8_t *sk) {
     memset(ST, 0, FRODO_NBAR * FRODO_N * sizeof(uint16_t));
     memset(S, 0, FRODO_N * FRODO_NBAR * sizeof(uint16_t));
     memset(E, 0, FRODO_N * FRODO_NBAR * sizeof(uint16_t));
-    memset(r_buf, 0, FRODO_NBAR * FRODO_N * 2 * sizeof(uint8_t));
+    //memset(r_buf, 0, FRODO_NBAR * FRODO_N * 2 * sizeof(uint8_t));
 
     return FRODO_SUCCESS;
 }
@@ -219,6 +254,11 @@ int frodo_encaps(uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
     uint8_t digest[FRODO_SE_BYTES + FRODO_SEC_BYTES];
     uint8_t shake_in[FRODO_SEC_BYTES + FRODO_SEC_BYTES + FRODO_SALT_BYTES];
     uint8_t domain_sep[1 + FRODO_SE_BYTES];
+
+    uint8_t r_bytes[FRODO_N * 2];
+    uint16_t r_row[FRODO_N];
+    uint8_t r_bytes_small[FRODO_NBAR * FRODO_NBAR * 2];
+    uint16_t r_small[FRODO_NBAR * FRODO_NBAR];
     
     //uint8_t packed_C[FRODO_PACKED_C_BYTES];
     uint8_t *packed_C = ws.encaps.packed_C;
@@ -226,7 +266,7 @@ int frodo_encaps(uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
     //uint16_t encoded_u[FRODO_NBAR * FRODO_NBAR];
     uint16_t *encoded_u = ws.encaps.encoded_u;
 
-    size_t i;
+    size_t i, j;
 
     /* Pointers into digest for seed_se and k */
     uint8_t *seed_se = digest;
@@ -235,10 +275,10 @@ int frodo_encaps(uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
     /* Large buffers - static to keep them off the stack */
 
     //static uint8_t r_buf[(2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR) * 2];
-    uint8_t *r_buf = ws.encaps.r_buf;
+    //uint8_t *r_buf = ws.encaps.r_buf;
 
     //static uint16_t r_words[2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR];
-    uint16_t *r_words = ws.encaps.r_words;
+    //uint16_t *r_words = ws.encaps.r_words;
 
     //static uint8_t packed_Bp[FRODO_PACKED_B_BYTES];
     uint8_t *packed_Bp = ws.encaps.packed_Bp;
@@ -268,17 +308,53 @@ int frodo_encaps(uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
     memcpy(domain_sep + 1, seed_se, FRODO_SE_BYTES);
 
     /* Compute: r <- SHAKE256(0x96 || seed_se) */
-    frodo_shake256(r_buf, (2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR) * 2, domain_sep, sizeof(domain_sep));
+    //frodo_shake256(r_buf, (2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR) * 2, domain_sep, sizeof(domain_sep));
 
     /* Convert: r bytes -> little-endian uint16_t words */
-    for (i = 0; i < 2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR; i++) {
-        r_words[i] = (uint16_t)r_buf[2 * i] | ((uint16_t)r_buf[2 * i + 1] << 8);
-    }
+    //for (i = 0; i < 2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR; i++) {
+    //    r_words[i] = (uint16_t)r_buf[2 * i] | ((uint16_t)r_buf[2 * i + 1] << 8);
+    //}
 
     /* Sample: matrices S', E', and E'' */
-    frodo_sample_matrix(Sp, r_words, FRODO_NBAR * FRODO_N);
-    frodo_sample_matrix(Ep, r_words + FRODO_NBAR * FRODO_N, FRODO_NBAR * FRODO_N);
-    frodo_sample_matrix(Epp, r_words + 2 * FRODO_NBAR * FRODO_N, FRODO_NBAR * FRODO_NBAR);
+    //frodo_sample_matrix(Sp, r_words, FRODO_NBAR * FRODO_N);
+    //frodo_sample_matrix(Ep, r_words + FRODO_NBAR * FRODO_N, FRODO_NBAR * FRODO_N);
+    //frodo_sample_matrix(Epp, r_words + 2 * FRODO_NBAR * FRODO_N, FRODO_NBAR * FRODO_NBAR);
+
+    // incremental shake replaces r_buf + r_words entirely
+    uint64_t se_ctx_buf[26];
+    shake256incctx se_ctx;
+    se_ctx.ctx = se_ctx_buf;
+    shake256_inc_init(&se_ctx);
+    shake256_inc_absorb(&se_ctx, domain_sep, sizeof(domain_sep));
+    shake256_inc_finalize(&se_ctx);
+
+    // Sample Sp row by row
+    for (i = 0; i < FRODO_NBAR; i++) {
+        shake256_inc_squeeze(r_bytes, FRODO_N * 2, &se_ctx);
+        for (j = 0; j < FRODO_N; j++) {
+            r_row[j] = (uint16_t)r_bytes[2*j] | ((uint16_t)r_bytes[2*j+1] << 8);
+        }
+        frodo_sample_matrix(Sp + i * FRODO_N, r_row, FRODO_N);
+    }
+
+    // sample Ep row by row
+    for (i = 0; i < FRODO_NBAR; i++) {
+        shake256_inc_squeeze(r_bytes, FRODO_N * 2, &se_ctx);
+        for (j = 0; j < FRODO_N; j++) {
+            r_row[j] = (uint16_t)r_bytes[2*j] | ((uint16_t)r_bytes[2*j+1] << 8);
+        }
+        frodo_sample_matrix(Ep + i * FRODO_N, r_row, FRODO_N);
+    }
+
+    // Sample Epp
+    shake256_inc_squeeze(r_bytes_small, sizeof(r_bytes_small), &se_ctx);
+    for (i = 0; i < FRODO_NBAR * FRODO_NBAR; i++) {
+        r_small[i] = (uint16_t)r_bytes_small[2*i] | ((uint16_t)r_bytes_small[2*i+1] << 8);
+    }
+    frodo_sample_matrix(Epp, r_small, FRODO_NBAR * FRODO_NBAR);
+
+
+
 
     /* Compute: B' <- (S' * A + E') */
     frodo_mul_add_spa_plus_e(Bp, Sp, Ep, seed_A);
@@ -336,7 +412,7 @@ int frodo_encaps(uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
     memset(Ep, 0, FRODO_NBAR * FRODO_N * sizeof(uint16_t));
     memset(Epp, 0, FRODO_NBAR * FRODO_NBAR * sizeof(uint16_t));
     memset(V, 0, FRODO_NBAR * FRODO_NBAR * sizeof(uint16_t));
-    memset(r_buf, 0, (2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR) * 2 * sizeof(uint8_t));
+    //memset(r_buf, 0, (2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR) * 2 * sizeof(uint8_t));
 
     return FRODO_SUCCESS;
 }
@@ -381,9 +457,14 @@ int frodo_decaps(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
     uint8_t shake_in[FRODO_SEC_BYTES + FRODO_SEC_BYTES + FRODO_SALT_BYTES];
     uint8_t domain_sep[1 + FRODO_SE_BYTES];
     uint8_t k_bar[FRODO_SEC_BYTES];
-    size_t i, j;
+    size_t i, j, k;
     int ct_match = 0;
     uint8_t ct_mismatch = 0;
+    uint8_t r_bytes[FRODO_N * 2];
+    uint16_t r_row[FRODO_N];
+    uint8_t r_bytes_small[FRODO_NBAR * FRODO_NBAR * 2];
+    uint16_t r_small[FRODO_NBAR * FRODO_NBAR];
+
 
     /* Pointers into diget for seed_se_prime and k_prime */
     uint8_t *seed_se_prime = digest;
@@ -391,7 +472,7 @@ int frodo_decaps(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
 
     /* Large buffers */
     uint16_t *Bp = ws.decaps.Bp;
-    uint16_t *ST = ws.decaps.ST;
+    //uint16_t *ST = ws.decaps.ST;
     uint16_t *Sp = ws.decaps.Sp;
     uint16_t *Ep = ws.decaps.Ep;
     //uint16_t *Bpp = ws.decaps.Bpp;
@@ -402,15 +483,15 @@ int frodo_decaps(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
     uint16_t *V = ws.decaps.V;
     uint16_t *Cp = ws.decaps.Cp;
     uint16_t *S = ws.decaps.S;
-    uint16_t *B = ws.decaps.B;
+    //uint16_t *B = ws.decaps.B;
 
     //static frodo_matrix_nbar_n_t Bp, ST, Sp, Ep, Bpp;
     //static frodo_matrix_nbar_nbar_t C, M, W, Epp, V, Cp;
     //static frodo_matrix_n_nbar_t S, B;
 
     uint16_t *encoded_u = ws.decaps.encoded_u;
-    uint16_t *r_words = ws.decaps.r_words;
-    uint8_t *r_buf = ws.decaps.r_buf;
+    //uint16_t *r_words = ws.decaps.r_words;
+    //uint8_t *r_buf = ws.decaps.r_buf;
     //uint8_t *packed_Bpp = ws.decaps.packed_Bpp;
     uint8_t *packed_Cp = ws.decaps.packed_Cp;
     //uint8_t *ss_in = ws.decaps.ss_in;
@@ -428,12 +509,19 @@ int frodo_decaps(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
     frodo_unpack(C, FRODO_NBAR * FRODO_NBAR, packed_C, FRODO_PACKED_C_BYTES);
 
     /* Unpack S^T from secret key (sk) in little-endian */
-    frodo_unpack_le16(ST, packed_ST, FRODO_NBAR * FRODO_N);
+    //frodo_unpack_le16(ST, packed_ST, FRODO_NBAR * FRODO_N);
 
     /* Transpose S^T to get matrix S */
-    for (i = 0; i < FRODO_N; i++) {
-        for (j = 0; j < FRODO_NBAR; j++) {
-            S[i * FRODO_NBAR + j] = ST[j * FRODO_N + i];
+    //for (i = 0; i < FRODO_N; i++) {
+    //    for (j = 0; j < FRODO_NBAR; j++) {
+    //        S[i * FRODO_NBAR + j] = ST[j * FRODO_N + i];
+    //    }
+    //}
+    uint16_t st_row[FRODO_N];
+    for (j = 0; j < FRODO_NBAR; j++) {
+        frodo_unpack_le16(st_row, packed_ST + j * FRODO_N * 2, FRODO_N);
+        for (i = 0; i < FRODO_N; i++) {
+            S[i * FRODO_NBAR + j] = st_row[i];
         }
     }
 
@@ -458,17 +546,53 @@ int frodo_decaps(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
     memcpy(domain_sep + 1, seed_se_prime, FRODO_SE_BYTES);
 
     /* Compute: r' (r_buf) <- SHAKE256(0x96 || seed_se_prime) */
-    frodo_shake256(r_buf, (2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR) * 2, domain_sep, sizeof(domain_sep));
+    //frodo_shake256(r_buf, (2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR) * 2, domain_sep, sizeof(domain_sep));
 
     /* Convert: r' (r_buf) bytes -> little-endian uint16_t words */
-    for (i = 0; i < 2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR; i++) {
-        r_words[i] = (uint16_t)r_buf[2 * i] | ((uint16_t)r_buf[2 * i + 1] << 8);
-    }
+    //for (i = 0; i < 2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR; i++) {
+    //    r_words[i] = (uint16_t)r_buf[2 * i] | ((uint16_t)r_buf[2 * i + 1] << 8);
+    //}
 
     /* Re-sample: S' (Sp), E' (Ep), and E'' (Epp) */
-    frodo_sample_matrix(Sp, r_words, FRODO_NBAR * FRODO_N);
-    frodo_sample_matrix(Ep, r_words + FRODO_NBAR * FRODO_N, FRODO_NBAR * FRODO_N);
-    frodo_sample_matrix(Epp, r_words + 2 * FRODO_NBAR * FRODO_N, FRODO_NBAR * FRODO_NBAR);
+    //frodo_sample_matrix(Sp, r_words, FRODO_NBAR * FRODO_N);
+    //frodo_sample_matrix(Ep, r_words + FRODO_NBAR * FRODO_N, FRODO_NBAR * FRODO_N);
+    //frodo_sample_matrix(Epp, r_words + 2 * FRODO_NBAR * FRODO_N, FRODO_NBAR * FRODO_NBAR);
+
+    // incremental shake replaces r_buf + r_words entirely
+    uint64_t se_ctx_buf[26];
+    shake256incctx se_ctx;
+    se_ctx.ctx = se_ctx_buf;
+    shake256_inc_init(&se_ctx);
+    shake256_inc_absorb(&se_ctx, domain_sep, sizeof(domain_sep));
+    shake256_inc_finalize(&se_ctx);
+
+    // Sample Sp row by row
+    for (i = 0; i < FRODO_NBAR; i++) {
+        shake256_inc_squeeze(r_bytes, FRODO_N * 2, &se_ctx);
+        for (j = 0; j < FRODO_N; j++) {
+            r_row[j] = (uint16_t)r_bytes[2*j] | ((uint16_t)r_bytes[2*j+1] << 8);
+        }
+        frodo_sample_matrix(Sp + i * FRODO_N, r_row, FRODO_N);
+    }
+
+    // sample Ep row by row
+    for (i = 0; i < FRODO_NBAR; i++) {
+        shake256_inc_squeeze(r_bytes, FRODO_N * 2, &se_ctx);
+        for (j = 0; j < FRODO_N; j++) {
+            r_row[j] = (uint16_t)r_bytes[2*j] | ((uint16_t)r_bytes[2*j+1] << 8);
+        }
+        frodo_sample_matrix(Ep + i * FRODO_N, r_row, FRODO_N);
+    }
+
+    // Sample Epp
+    //uint8_t r_bytes_small[FRODO_NBAR * FRODO_NBAR *2];
+    //uint16_t r_small[FRODO_NBAR * FRODO_NBAR];
+    shake256_inc_squeeze(r_bytes_small, sizeof(r_bytes_small), &se_ctx);
+    for (i = 0; i < FRODO_NBAR * FRODO_NBAR; i++) {
+        r_small[i] = (uint16_t)r_bytes_small[2*i] | ((uint16_t)r_bytes_small[2*i+1] << 8);
+    }
+    frodo_sample_matrix(Epp, r_small, FRODO_NBAR * FRODO_NBAR);
+
 
     /* Encrypt via Computing:
         B'' <- S' * A + E'
@@ -482,9 +606,32 @@ int frodo_decaps(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
     // Compute: S' * A + E'
     //frodo_mul_add_spa_plus_e(Bpp, Sp, Ep, seed_A);
     // Convert: packed_B (bytes) -> B (matrix, n x nbar)
-    frodo_unpack(B, FRODO_N * FRODO_NBAR, packed_B, FRODO_PACKED_B_BYTES);
+    //frodo_unpack(B, FRODO_N * FRODO_NBAR, packed_B, FRODO_PACKED_B_BYTES);
     // Compute: S' * B + E''
-    frodo_compute_out(V, Sp, FRODO_NBAR, FRODO_N, B, FRODO_NBAR, Epp);
+    //frodo_compute_out(V, Sp, FRODO_NBAR, FRODO_N, B, FRODO_NBAR, Epp);
+    
+    uint16_t b_col[FRODO_N];
+    uint16_t V_row[FRODO_NBAR];
+
+    // init V with Epp
+    memcpy(V, Epp, FRODO_NBAR * FRODO_NBAR * sizeof(uint16_t));
+
+    // compute V = Sp * B + Epp
+    for (j = 0; j < FRODO_NBAR; j++) {
+        for (k = 0; k < FRODO_N; k++) {
+            uint8_t hi = packed_B[(k * FRODO_NBAR + j) * 2];
+            uint8_t lo = packed_B[(k * FRODO_NBAR + j) * 2 + 1];
+            b_col[k] = ((uint16_t)hi << 8) | lo;
+        }
+        for (i = 0; i < FRODO_NBAR; i++) {
+            uint32_t acc = 0;
+            for (k = 0; k < FRODO_N; k++) {
+                acc += (uint32_t)Sp[i * FRODO_N + k] * (uint32_t)b_col[k];
+            }
+            V[i * FRODO_NBAR + j] = (uint16_t)acc + Epp[i * FRODO_NBAR + j];
+        }
+    }
+    
     // Convert: u' (bytes) -> encoded_u (matrix nbar x nbar)
     frodo_encode(encoded_u, u_prime);
     // Compute: C' <- V + encoded_u
@@ -542,7 +689,7 @@ int frodo_decaps(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
     shake256_inc_squeeze(ss, FRODO_SS_BYTES, &ctx);
 
     /* Zeroize sensitive intermediate values */
-    memset(ST, 0, FRODO_NBAR * FRODO_N * sizeof(uint16_t));
+    //memset(ST, 0, FRODO_NBAR * FRODO_N * sizeof(uint16_t));
     memset(S, 0, FRODO_N * FRODO_NBAR * sizeof(uint16_t));
     memset(M, 0, FRODO_NBAR * FRODO_NBAR * sizeof(uint16_t));
     memset(u_prime, 0, sizeof(u_prime));
@@ -552,7 +699,7 @@ int frodo_decaps(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
     memset(Epp, 0, FRODO_NBAR * FRODO_NBAR * sizeof(uint16_t));
     memset(V, 0, FRODO_NBAR * FRODO_NBAR * sizeof(uint16_t));
     memset(k_bar, 0, sizeof(k_bar));
-    memset(r_buf, 0, (2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR) * 2 * sizeof(uint8_t));
+    //memset(r_buf, 0, (2 * FRODO_N * FRODO_NBAR + FRODO_NBAR * FRODO_NBAR) * 2 * sizeof(uint8_t));
 
     return FRODO_SUCCESS;
 }

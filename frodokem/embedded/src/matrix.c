@@ -93,6 +93,44 @@ void frodo_compute_b(uint16_t *out, const uint16_t *s, const uint16_t *e, const 
 }
 
 /**
+ * @brief Compute B = A*S + E row by row, packing each row into pk
+ *        and absorbing into SHAKE on the fly
+ * 
+ * Eliminates the need for a full B buffer (21,504 bytes) and packed_B buffer
+ * (201,504 bytes) from the workspace by never materializing B in full.
+ * 
+ * @param[out] pk_b_out Pointer to packed_b region within pk
+ * @param[out] pkh_ctx  Incremental SHAKE256 state seeded with seed_A (each packed B is absorbed here)
+ * @param[in]  S        Input S matrix
+ * @param[in]  E        Input E matrix
+ * @param[in]  seed_A   16-byte seed for AES-based generation of A
+ */
+void frodo_compute_b_streaming(uint8_t *pk_b_out, shake256incctx *pkh_ctx, const uint16_t *S, const uint16_t *E, const uint8_t *seed_A) {
+    uint16_t A_row[FRODO_N];              // one row of A (2,688 bytes)
+    uint16_t B_row[FRODO_NBAR];           // one row of B (16 bytes)
+    uint8_t B_row_packed[FRODO_NBAR * 2]; // packed row (16 bytes)
+    size_t i, j, k;
+
+    for (i = 0; i < FRODO_N; i++) {
+        frodo_gen_A_row(A_row, seed_A, (uint16_t)i);
+        for (j = 0; j < FRODO_NBAR; j++) {
+            uint32_t acc = 0;
+            for (k = 0; k < FRODO_N; k++) {
+                acc += (uint32_t)A_row[k] * (uint32_t)S[k * FRODO_NBAR + j];
+            }
+            B_row[j] = (uint16_t)acc + E[i * FRODO_NBAR + j];
+        }
+
+        /* Pack this row and write directly into pk */
+        frodo_pack(B_row_packed, sizeof(B_row_packed), B_row, FRODO_NBAR);
+        memcpy(pk_b_out + i * FRODO_NBAR * 2, B_row_packed, FRODO_NBAR * 2);
+        
+        /* Absorb into pkh state */
+        shake256_inc_absorb(pkh_ctx, B_row_packed, FRODO_NBAR * 2);
+    }
+}
+
+/**
  * @brief Compute out = S*B + E for general matrix dimensions.
  * 
  * @note Used in Frodo.Encaps and Frodo.Decaps for computing
@@ -153,3 +191,52 @@ void frodo_mul_add_spa_plus_e(uint16_t *out, const uint16_t *sp, const uint16_t 
         }
     }
 }
+
+/**
+ * @brief Compute B'' = S' * A + E' row by row, comparing
+ *        each packed row immediately against packed_Bp from
+ *        the ciphertext.
+ * 
+ * Eliminates Bpp (21,504 bytes) and packed_Bpp (21,504 bytes)
+ * where A is generated on-the-fly.
+ * 
+ * @note Generates A one row at a time to avoid materializing the full
+ *       N x N matrix.
+ * 
+ * @param[out] ct_mismatch Accumulated mismatch flag    Output matrix
+ * @param[in]  Sp     Input S' matrix
+ * @param[in]  Ep      Input E' matrix
+ * @param[in]  seed_A 16-byte seed for AES-based A generation
+ * @param[in]  packed_Bp Packed B' directly from ct (FRODO_PACKED_B_BYTES)
+ */
+void frodo_mul_add_spa_plus_e_streaming(uint8_t *ct_mismatch, const uint16_t *Sp, const uint16_t *Ep,
+                              const uint8_t *seed_A, const uint8_t *packed_Bp) {
+    uint16_t A_row[FRODO_N];                // one row of A (2,688 bytes)
+    uint16_t Bpp_row[FRODO_N];              // one row of B'' (2,688 bytes)
+    uint8_t Bpp_row_packed[FRODO_N * 2];    // packed row (2,688 bytes)
+    size_t i, j, k;
+
+    /* Init out with E' */
+    //memcpy(out, e, FRODO_NBAR * FRODO_N * sizeof(uint16_t));
+
+    for (j = 0; j < FRODO_NBAR; j++) {
+        // initialize this row of B'' with corresponding row of E'
+        for (k = 0; k < FRODO_N; k++) {
+            Bpp_row[k] = Ep[j * FRODO_N + k];
+        }
+        // accumulate S'[j,i] * A[i,:] for all rows i of A
+        for (i = 0; i < FRODO_N; i++) {
+            frodo_gen_A_row(A_row, seed_A, (uint16_t)i);
+            for (k = 0; k < FRODO_N; k++) {
+                Bpp_row[k] += Sp[j * FRODO_N + i] * A_row[k];
+            }
+        }
+        // pack the row
+        frodo_pack(Bpp_row_packed, sizeof(Bpp_row_packed), Bpp_row, FRODO_N);
+
+        // Compare against corresponding bytes in packed_Bp from ct
+        *ct_mismatch |= (uint8_t)frodo_ct_verify(packed_Bp + j * FRODO_N * 2, Bpp_row_packed, FRODO_N * 2);
+
+    }
+}
+

@@ -57,8 +57,8 @@ int frodo_keygen(uint8_t *pk, uint8_t *sk) {
     uint16_t *ST = ws.keygen.ST;
     uint16_t *S = ws.keygen.S;
     uint16_t *E = ws.keygen.E;
-    uint16_t *B = ws.keygen.B;
-    uint8_t *packed_B = ws.keygen.packed_B;
+    //uint16_t *B = ws.keygen.B;
+    //uint8_t *packed_B = ws.keygen.packed_B;
     uint8_t *packed_ST = ws.keygen.packed_ST;
 
 
@@ -118,18 +118,36 @@ int frodo_keygen(uint8_t *pk, uint8_t *sk) {
     }
 
     /* Compute: B <- A*S + E */
-    frodo_compute_b(B, S, E, seed_A);
+    //frodo_compute_b(B, S, E, seed_A);
 
     /* Convert: Matrix B -> Packed_B bytes */
-    frodo_pack(packed_B, FRODO_PACKED_B_BYTES, B, FRODO_N * FRODO_NBAR);
+    //frodo_pack(packed_B, FRODO_PACKED_B_BYTES, B, FRODO_N * FRODO_NBAR);
 
 
-    /* Arrange: pk <- seed_A || packed_B */
+    /* Write seed_A into pk */
     memcpy(pk, seed_A, FRODO_SEED_A_BYTES);
-    memcpy(pk + FRODO_SEED_A_BYTES, packed_B, FRODO_PACKED_B_BYTES);
+    //memcpy(pk + FRODO_SEED_A_BYTES, packed_B, FRODO_PACKED_B_BYTES);
 
     /* Compute: pkh <- SHAKE256(pk) */
-    frodo_shake256(pkh, FRODO_SEC_BYTES, pk, FRODO_PK_BYTES);
+    //frodo_shake256(pkh, FRODO_SEC_BYTES, pk, FRODO_PK_BYTES);
+
+    /* Initialize pkh SHAKE state and absorb seed_A */
+    uint64_t pkh_ctx_buf[26];
+    shake256incctx pkh_ctx;
+    pkh_ctx.ctx = pkh_ctx_buf;
+    shake256_inc_init(&pkh_ctx);
+    shake256_inc_absorb(&pkh_ctx, seed_A, FRODO_SEED_A_BYTES);
+
+    /* Compute B row by row, writing packed rows into pk, absorbing */
+    frodo_compute_b_streaming(
+        pk + FRODO_SEED_A_BYTES,
+        &pkh_ctx,
+        S, E, seed_A
+    );
+
+    /* Finalize pkh */
+    shake256_inc_finalize(&pkh_ctx);
+    shake256_inc_squeeze(pkh, FRODO_SEC_BYTES, &pkh_ctx);
 
     /* Arrange: sk <- s || pk || encoded_ST || pkh */
     frodo_pack_le16(packed_ST, ST, FRODO_NBAR * FRODO_N); // little-endian for sk
@@ -364,7 +382,8 @@ int frodo_decaps(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
     uint8_t domain_sep[1 + FRODO_SE_BYTES];
     uint8_t k_bar[FRODO_SEC_BYTES];
     size_t i, j;
-    int ct_match;
+    int ct_match = 0;
+    uint8_t ct_mismatch = 0;
 
     /* Pointers into diget for seed_se_prime and k_prime */
     uint8_t *seed_se_prime = digest;
@@ -375,7 +394,7 @@ int frodo_decaps(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
     uint16_t *ST = ws.decaps.ST;
     uint16_t *Sp = ws.decaps.Sp;
     uint16_t *Ep = ws.decaps.Ep;
-    uint16_t *Bpp = ws.decaps.Bpp;
+    //uint16_t *Bpp = ws.decaps.Bpp;
     uint16_t *C = ws.decaps.C;
     uint16_t *M = ws.decaps.M;
     uint16_t *W = ws.decaps.W;
@@ -392,7 +411,7 @@ int frodo_decaps(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
     uint16_t *encoded_u = ws.decaps.encoded_u;
     uint16_t *r_words = ws.decaps.r_words;
     uint8_t *r_buf = ws.decaps.r_buf;
-    uint8_t *packed_Bpp = ws.decaps.packed_Bpp;
+    //uint8_t *packed_Bpp = ws.decaps.packed_Bpp;
     uint8_t *packed_Cp = ws.decaps.packed_Cp;
     //uint8_t *ss_in = ws.decaps.ss_in;
 
@@ -455,8 +474,13 @@ int frodo_decaps(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
         B'' <- S' * A + E'
         C' <- S' * B + E'' + Encode(u')
     */
+
+    // Compute: S' * A + E', compare against B' from ct on the fly
+    frodo_mul_add_spa_plus_e_streaming(&ct_mismatch, Sp, Ep, seed_A, packed_Bp);
+
+
     // Compute: S' * A + E'
-    frodo_mul_add_spa_plus_e(Bpp, Sp, Ep, seed_A);
+    //frodo_mul_add_spa_plus_e(Bpp, Sp, Ep, seed_A);
     // Convert: packed_B (bytes) -> B (matrix, n x nbar)
     frodo_unpack(B, FRODO_N * FRODO_NBAR, packed_B, FRODO_PACKED_B_BYTES);
     // Compute: S' * B + E''
@@ -467,13 +491,14 @@ int frodo_decaps(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
     frodo_add(Cp, V, encoded_u, FRODO_NBAR * FRODO_NBAR);
 
     /* Convert: B'' (matrix) -> packed_Bpp (bytes) */
-    frodo_pack(packed_Bpp, FRODO_PACKED_B_BYTES, Bpp, FRODO_NBAR * FRODO_N);
+    //frodo_pack(packed_Bpp, FRODO_PACKED_B_BYTES, Bpp, FRODO_NBAR * FRODO_N);
 
     /* Convert: C' (matrix) -> packed_Cp (bytes) */
     frodo_pack(packed_Cp, FRODO_PACKED_C_BYTES, Cp, FRODO_NBAR * FRODO_NBAR);
 
     /* Compare re-encrypted ciphertext against received ciphertext (constant-time) */
-    ct_match = frodo_ct_verify(packed_Bp, packed_Bpp, FRODO_PACKED_B_BYTES);
+    //ct_match = frodo_ct_verify(packed_Bp, packed_Bpp, FRODO_PACKED_B_BYTES);
+    ct_match = (int)ct_mismatch;
     ct_match |= frodo_ct_verify(packed_C, packed_Cp, FRODO_PACKED_C_BYTES);
 
     /*
